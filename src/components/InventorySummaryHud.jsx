@@ -141,8 +141,8 @@ export default function InventorySummaryHud({
         zIndex: 40
       } : {
         position: 'absolute',
-        top: '20px',
-        left: '21%',
+        bottom: '24px',
+        right: '24px',
         zIndex: 35
       }}
       className={`font-mono shadow-2xl select-none w-80 md:w-84 ${isDragging ? 'opacity-90 ring-2 ring-cyan-400 cursor-grabbing' : ''}`}

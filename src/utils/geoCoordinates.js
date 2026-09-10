@@ -22,7 +22,7 @@ export const KEY_NODES = {
     shortName: 'LA/롱비치항',
     // Southern California coastline on shifted US map
     x: 1150,
-    y: 395,
+    y: 335,
     type: 'PORT',
     region: '미국 캘리포니아 연안'
   },
@@ -32,7 +32,7 @@ export const KEY_NODES = {
     shortName: '시카고(ORD)',
     // Near south tip of Lake Michigan, widely separated from Kokomo
     x: 1395,
-    y: 265,
+    y: 205,
     type: 'AIRPORT',
     region: '미국 중서부 일리노이'
   },
@@ -42,7 +42,7 @@ export const KEY_NODES = {
     shortName: '코코모 법인',
     // Indiana: endpoint of the inland rail route, separated south of ORD
     x: 1425,
-    y: 350,
+    y: 290,
     type: 'HUB_US',
     region: '미국 인디애나 코코모'
   },
@@ -52,7 +52,7 @@ export const KEY_NODES = {
     shortName: '고객 SPE',
     // Positioned in Mid-Atlantic / Northeast customer cluster well above Kokomo
     x: 1485,
-    y: 235,
+    y: 175,
     type: 'CUSTOMER',
     region: '미국 고객사 생산라인'
   }
@@ -68,18 +68,18 @@ export const SEA_WAYPOINTS = [
   { x: 330, y: 430 }, // South of Japan into Pacific
   { x: 470, y: 415 }, // North Pacific maritime highway
   { x: 700, y: 380 }, // Mid-Pacific
-  { x: 940, y: 390 }, // East Pacific
-  { x: 1100, y: 405 }, // California offshore waters
-  { x: 1150, y: 395 }  // Long Beach Harbor dock (on ocean shoreline!)
+  { x: 940, y: 370 }, // East Pacific
+  { x: 1100, y: 350 }, // California offshore waters
+  { x: 1150, y: 335 }  // Long Beach Harbor dock (on ocean shoreline!)
 ];
 
 // Inland Rail Waypoints: Long Beach Harbor -> Cajon Pass -> Southwest -> Rockies -> Kokomo, IN (Route termination!)
 export const RAIL_WAYPOINTS = [
-  { x: 1150, y: 395 }, // Long Beach Harbor (Dock)
-  { x: 1200, y: 380 }, // Cajon Pass / Mojave
-  { x: 1270, y: 360 }, // New Mexico / Colorado
-  { x: 1350, y: 355 }, // Illinois / Midwest
-  { x: 1425, y: 350 }  // Kokomo Facility (Indiana - EXACT ROUTE ENDPOINT)
+  { x: 1150, y: 335 }, // Long Beach Harbor (Dock)
+  { x: 1200, y: 320 }, // Cajon Pass / Mojave
+  { x: 1270, y: 300 }, // New Mexico / Colorado
+  { x: 1350, y: 295 }, // Illinois / Midwest
+  { x: 1425, y: 290 }  // Kokomo Facility (Indiana - EXACT ROUTE ENDPOINT)
 ];
 
 // Air Waypoints: Incheon Airport -> Aleutians -> Chicago ORD -> Kokomo
@@ -87,10 +87,10 @@ export const AIR_WAYPOINTS = [
   { x: 180, y: 320 }, // Incheon Airport
   { x: 440, y: 190 }, // North of Japan
   { x: 720, y: 130 }, // Aleutian Islands Great Circle Arc
-  { x: 1040, y: 150 }, // Western Canada high arc
-  { x: 1290, y: 220 }, // Upper Midwest
-  { x: 1395, y: 265 }, // Chicago O'Hare (ORD)
-  { x: 1425, y: 350 }  // Kokomo Facility (Indiana)
+  { x: 1040, y: 120 }, // Western Canada high arc
+  { x: 1290, y: 165 }, // Upper Midwest
+  { x: 1395, y: 205 }, // Chicago O'Hare (ORD)
+  { x: 1425, y: 290 }  // Kokomo Facility (Indiana)
 ];
 
 // Calculate point along waypoints polyline

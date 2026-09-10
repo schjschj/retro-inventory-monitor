@@ -196,9 +196,9 @@ export default function RetroWorldMap({
 
         {/* ======================================================== */}
         {/* 5. NORTH AMERICA (CANADA & UNITED STATES FULL CONTINENT) */}
-        {/* Comfortably proportioned with wide margins on the right! */}
+        {/* Shifted UPWARDS by 60px to free up bottom-right space for HUD */}
         {/* ======================================================== */}
-        <g fill="#101c30" stroke="#294875" strokeWidth="1.5">
+        <g id="north-america-continent" transform="translate(0, -60)" fill="#101c30" stroke="#294875" strokeWidth="1.5">
           {/* Alaska & North Pacific Coast */}
           <path d="
             M 890,165 

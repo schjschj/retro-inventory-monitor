@@ -56,8 +56,17 @@ export default function DataControlModal({
   setAuthRole,
   onOpenAdminAuth
 }) {
-  const [activeTab, setActiveTab] = useState('SHIPMENTS');
+  const [activeTab, setActiveTab] = useState('INCHEON');
   const [uploadMessage, setUploadMessage] = useState(null);
+
+  // Helper to always keep shipments strictly sorted by ETA descending (newest ETA first)
+  const sortShipmentsByEtaDesc = (list) => {
+    return [...list].sort((a, b) => {
+      const timeA = a.eta ? new Date(a.eta).getTime() : 0;
+      const timeB = b.eta ? new Date(b.eta).getTime() : 0;
+      return timeB - timeA;
+    });
+  };
 
   const currentRole = authRole || (isAdmin ? 'MASTER_ADMIN' : null);
   const isViewer = !currentRole;
@@ -334,7 +343,7 @@ export default function DataControlModal({
       items
     };
 
-    const nextShipments = [created, ...shipments];
+    const nextShipments = sortShipmentsByEtaDesc([created, ...shipments]);
     setShipments(nextShipments);
     syncShipments(nextShipments);
     try {
@@ -382,7 +391,7 @@ export default function DataControlModal({
   const handleDeleteShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playClick();
-    const nextShipments = shipments.filter(s => s.id !== id);
+    const nextShipments = sortShipmentsByEtaDesc(shipments.filter(s => s.id !== id));
     setShipments(nextShipments);
     await syncShipments(nextShipments);
     try {
@@ -433,7 +442,7 @@ export default function DataControlModal({
   const handleSaveEditShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playSuccess();
-    const nextShipments = shipments.map(s => {
+    const mapped = shipments.map(s => {
       if (s.id === id) {
         return {
           ...s,
@@ -455,6 +464,7 @@ export default function DataControlModal({
       }
       return s;
     });
+    const nextShipments = sortShipmentsByEtaDesc(mapped);
     setShipments(nextShipments);
     await syncShipments(nextShipments);
     try {
@@ -475,7 +485,7 @@ export default function DataControlModal({
   const handleToggleDelay = (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playToggle();
-    const updated = shipments.map(s => {
+    const mapped = shipments.map(s => {
       if (s.id === id) {
         const nextDelayed = !s.isDelayed;
         return {
@@ -487,6 +497,7 @@ export default function DataControlModal({
       }
       return s;
     });
+    const updated = sortShipmentsByEtaDesc(mapped);
     setShipments(updated);
     syncShipments(updated);
     try {
@@ -496,12 +507,13 @@ export default function DataControlModal({
 
   const handleProgressChange = (id, progress) => {
     if (!checkPermission('SHIPMENTS')) return;
-    const updated = shipments.map(s => {
+    const mapped = shipments.map(s => {
       if (s.id === id) {
         return { ...s, progress: Number(progress) };
       }
       return s;
     });
+    const updated = sortShipmentsByEtaDesc(mapped);
     setShipments(updated);
     syncShipments(updated);
     try {
@@ -596,23 +608,30 @@ export default function DataControlModal({
 
       // 1. Direct handling of pre-parsed production schedule shipments (from 요약 sheet)
       if (data && data.length > 0 && data[0]?.isPreParsed) {
-        const railCount = data.filter(s => s.inlandMode === 'RAIL').length;
-        const truckCount = data.filter(s => s.inlandMode === 'TRUCK').length;
-        setShipments(data);
-        syncShipments(data);
+        const sortedData = sortShipmentsByEtaDesc(data);
+        const railCount = sortedData.filter(s => s.inlandMode === 'RAIL').length;
+        const truckCount = sortedData.filter(s => s.inlandMode === 'TRUCK').length;
+        setShipments(sortedData);
+        syncShipments(sortedData);
         try {
-          localStorage.setItem('tactical_shipments', JSON.stringify(data));
+          localStorage.setItem('tactical_shipments', JSON.stringify(sortedData));
         } catch(e) {}
         sound.playSuccess();
+        const skippedMsg = data.skippedPastCount ? ` (ETA 과거 차수 ${data.skippedPastCount}건 등록 제외)` : '';
         setUploadMessage({
           type: 'success',
-          text: `성공: 미주 출하계획 ${data.length}개 차수를 정상 등록하여 클라우드 및 저장소에 영구 저장했습니다! (철송: ${railCount}건, 싱글 트럭: ${truckCount}건)`
+          text: `성공: 미주 출하계획 ${sortedData.length}개 차수를 정상 등록하여 클라우드 및 저장소에 영구 저장했습니다!${skippedMsg} (철송: ${railCount}건, 싱글 트럭: ${truckCount}건)`
         });
         return;
       }
 
-      // 2. Standard template / generic tabular data fallback
-      const importedShipments = data.map((row, idx) => {
+      // 2. Standard template / generic tabular data fallback with past-ETA filtering
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      let genericSkipped = 0;
+
+      const importedShipments = [];
+      data.forEach((row, idx) => {
         const batchNo = row['차수명'] || row['차수ID'] || row['Batch No'] || row['차수'] || `신규 차수 #${idx + 1}`;
         const rawType = String(row['운송수단(SEA/AIR)'] || row['운송수단'] || row['Type'] || 'SEA').toUpperCase();
         const type = rawType.includes('AIR') ? 'AIR' : rawType.includes('TRUCK') ? 'TRUCK' : 'SEA';
@@ -626,12 +645,18 @@ export default function DataControlModal({
         
         const departureDate = normalizeDateSafe(rawDep, new Date('2026-09-02'));
         const eta = normalizeDateSafe(rawEta, new Date('2026-09-20'));
+
+        // 등록일 기준 과거 필터링
+        if (new Date(eta).getTime() < todayMidnight) {
+          genericSkipped++;
+          return;
+        }
+
         const quantity = Number(row['수량(EA)'] || row['수량'] || row['Multi cap 入'] || row['Quantity']) || 5000;
-        
         const progress = calculateRealProgress(departureDate, eta, new Date('2026-09-09T09:00:00'));
         const isDelayed = new Date('2026-09-09T09:00:00') > new Date(eta);
 
-        return {
+        importedShipments.push({
           id: `IMPORT-${idx}-${Date.now().toString().slice(-4)}`,
           batchNo,
           type,
@@ -651,20 +676,27 @@ export default function DataControlModal({
           origin: type === 'AIR' ? '인천공항 (KR)' : '인천신항 (KR)',
           portOfEntry: type === 'AIR' ? '시카고 오헤어 (ORD)' : 'LA 롱비치 항만 (US)',
           destination: '코코모 미주법인 (US)'
-        };
+        });
       });
 
       if (importedShipments.length > 0) {
-        const nextShipments = [...importedShipments, ...shipments];
+        const nextShipments = sortShipmentsByEtaDesc([...importedShipments, ...shipments]);
         setShipments(nextShipments);
         syncShipments(nextShipments);
         try {
           localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
         } catch(e) {}
         sound.playSuccess();
+        const skippedMsg = genericSkipped > 0 ? ` (ETA 과거 차수 ${genericSkipped}건 등록 제외)` : '';
         setUploadMessage({
           type: 'success',
-          text: `성공: ${importedShipments.length} 건의 운송 차수를 등록하고 클라우드 및 저장소에 영구 저장했습니다!`
+          text: `성공: ${importedShipments.length} 건의 운송 차수를 등록하고 클라우드 및 저장소에 영구 저장했습니다!${skippedMsg}`
+        });
+      } else if (genericSkipped > 0) {
+        sound.playAlert();
+        setUploadMessage({
+          type: 'error',
+          text: `업로드된 모든 차수(${genericSkipped}건)의 ETA가 등록일 기준 과거여서 등록되지 않았습니다.`
         });
       }
     } catch (err) {
@@ -811,21 +843,6 @@ export default function DataControlModal({
           <button
             onClick={() => {
               sound.playClick();
-              setActiveTab('SHIPMENTS');
-            }}
-            className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
-              activeTab === 'SHIPMENTS' 
-                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Ship className="w-4 h-4" />
-            <span>해상/항공 운송 차수 ({shipments.length})</span>
-          </button>
-
-          <button
-            onClick={() => {
-              sound.playClick();
               setActiveTab('INCHEON');
             }}
             className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
@@ -836,6 +853,21 @@ export default function DataControlModal({
           >
             <Factory className="w-4 h-4" />
             <span>인천 로트 관리 ({incheonInventory.waitingInspection.length + incheonInventory.passedInspection.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('SHIPMENTS');
+            }}
+            className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
+              activeTab === 'SHIPMENTS' 
+                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Ship className="w-4 h-4" />
+            <span>해상/항공 운송 차수 ({shipments.length})</span>
           </button>
 
           <button
@@ -1106,7 +1138,7 @@ export default function DataControlModal({
                 </div>
 
                 <div className="space-y-2">
-                  {shipments.map(s => (
+                  {sortShipmentsByEtaDesc(shipments).map(s => (
                     editingShipmentId === s.id ? (
                       <div key={s.id} className="p-3.5 bg-[#0f1d33] border-2 border-amber-400 rounded-sm space-y-3 shadow-[0_0_15px_rgba(251,191,36,0.25)] animate-fadeIn">
                         <div className="flex items-center justify-between border-b border-amber-500/40 pb-2">

@@ -271,6 +271,8 @@ function tryParseProductionSchedule(workbook) {
     const shipments = [];
     const currentTime = new Date('2026-09-09T09:00:00');
 
+    let skippedPastCount = 0;
+
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const r = rows[i];
       const batchStr = String(r[colBatch] || '').trim();
@@ -286,6 +288,16 @@ function tryParseProductionSchedule(workbook) {
       // Parse Departure & Arrival Dates
       const departureDate = parseExcelDateValue(colDep !== -1 ? r[colDep] : null, null, 0);
       const eta = parseExcelDateValue(colEta !== -1 ? r[colEta] : null, departureDate, 45);
+
+      // 등록일 기준 과거 필터링: ETA가 등록일(오늘) 자정 이전인 과거 차수는 등록하지 않음
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const etaTime = new Date(eta).getTime();
+
+      if (etaTime < todayMidnight) {
+        skippedPastCount++;
+        continue;
+      }
 
       // Multi cap Qty
       const rawQty = colQty !== -1 ? Number(r[colQty]) : 115200;
@@ -328,6 +340,7 @@ function tryParseProductionSchedule(workbook) {
     }
 
     if (shipments.length > 0) {
+      shipments.skippedPastCount = skippedPastCount;
       return shipments;
     }
   }
