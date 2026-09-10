@@ -5,6 +5,31 @@ import { formatDateDisplay } from '../utils/excelParser';
 import { MAP_DIMENSIONS } from '../utils/geoCoordinates';
 import { t } from '../utils/i18n';
 
+function formatBatchNo(batchNo, lang) {
+  if (lang !== 'en' || !batchNo) return batchNo;
+  return String(batchNo)
+    .replace(/해상\s*/g, 'SEA ')
+    .replace(/항공\s*/g, 'AIR ')
+    .replace(/긴급\s*/g, 'URGENT ')
+    .replace(/차\b/g, '')
+    .replace(/\(지연\)/g, '(DELAYED)')
+    .trim();
+}
+
+function formatStageLabel(stage, lang) {
+  if (lang !== 'en' || !stage) return stage;
+  return String(stage)
+    .replace(/인천신항\s*출항/g, 'Departed Incheon Port')
+    .replace(/인천공항\s*이륙/g, 'Departed Incheon Airport')
+    .replace(/태평양\s*횡단/g, 'Pacific Crossing')
+    .replace(/북태평양\s*비행/g, 'Pacific Flight')
+    .replace(/롱비치\s*입항/g, 'Long Beach Docked')
+    .replace(/시카고\s*착륙/g, 'Chicago Landed')
+    .replace(/철송/g, 'Rail')
+    .replace(/트럭/g, 'Truck')
+    .replace(/코코모\s*도착/g, 'Arrived Kokomo');
+}
+
 export default function TransitCarrier({
   shipment,
   position,
@@ -129,7 +154,7 @@ export default function TransitCarrier({
                 ? 'bg-red-950 border-red-500 text-red-300 font-bold'
                 : 'bg-black/90 border-slate-700 text-slate-200 font-semibold'
             }`}>
-              {shipment.batchNo || t('transitCarrier', lang)}
+              {formatBatchNo(shipment.batchNo, lang) || t('transitCarrier', lang)}
               {shipment.isDelayed && (
                 <span className="ml-1 text-red-400 font-bold animate-pulse">
                   {t('delayedBadge', lang)}
@@ -143,7 +168,7 @@ export default function TransitCarrier({
               <div className="flex items-center justify-between border-b border-cyan-800 pb-1.5 mb-2">
                 <div className="flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-xs font-bold text-cyan-300">{shipment.batchNo}</span>
+                  <span className="text-xs font-bold text-cyan-300">{formatBatchNo(shipment.batchNo, lang)}</span>
                 </div>
                 <span className={`text-[10px] px-1 py-0.2 border ${
                   shipment.isDelayed 
@@ -177,7 +202,7 @@ export default function TransitCarrier({
 
               <div className="mb-2">
                 <div className="flex justify-between text-[10px] text-slate-400 mb-0.5 font-bold">
-                  <span>{t('progressStage', lang)} ({stageLabel})</span>
+                  <span>{t('progressStage', lang)} ({formatStageLabel(stageLabel, lang)})</span>
                   <span className="text-cyan-400 font-bold">{Math.round(Number(shipment.progress) || 0)}%</span>
                 </div>
                 <div className="w-full bg-slate-800 h-2 border border-slate-600 rounded-none overflow-hidden">

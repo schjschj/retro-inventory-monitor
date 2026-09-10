@@ -1,7 +1,7 @@
 export const translations = {
   ko: {
     // Header
-    appTitle: '한-미 글로벌 재고·물류 전술 지휘센터',
+    appTitle: 'SANG-A 한-미 글로벌 재고-물류 전술 지휘센터',
     routeSubtitle: '[ICN ➔ KKM ➔ SPE]',
     satelliteTracking: '실시간 위성 추적 연동중',
     versionTag: 'TACTICAL SUPPLY CHAIN v2.7',
@@ -162,7 +162,7 @@ export const translations = {
   },
   en: {
     // Header
-    appTitle: 'Korea-US Global Inventory & Logistics Tactical Command Center',
+    appTitle: 'SANG-A Global Tactical Logistics Command Center',
     routeSubtitle: '[ICN ➔ KKM ➔ SPE]',
     satelliteTracking: 'Real-time Satellite Tracking Connected',
     versionTag: 'TACTICAL SUPPLY CHAIN v2.7',

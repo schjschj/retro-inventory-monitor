@@ -4,6 +4,17 @@ import { sound } from '../utils/soundFx';
 import { formatDateDisplay } from '../utils/excelParser';
 import { t } from '../utils/i18n';
 
+function formatBatchNo(batchNo, lang) {
+  if (lang !== 'en' || !batchNo) return batchNo;
+  return String(batchNo)
+    .replace(/해상\s*/g, 'SEA ')
+    .replace(/항공\s*/g, 'AIR ')
+    .replace(/긴급\s*/g, 'URGENT ')
+    .replace(/차\b/g, '')
+    .replace(/\(지연\)/g, '(DELAYED)')
+    .trim();
+}
+
 export default function BottomTransitTable({
   shipments,
   onSelectShipment,
@@ -78,7 +89,7 @@ export default function BottomTransitTable({
                       </span>
                     </span>
                   </td>
-                  <td className="p-2 font-bold text-white">{s.batchNo}</td>
+                  <td className="p-2 font-bold text-white">{formatBatchNo(s.batchNo, lang)}</td>
                   <td className="p-2 text-slate-300">{s.vesselName}</td>
                   <td className="p-2 font-mono text-cyan-300 font-bold">{s.containerNo}</td>
                   <td className="p-2 text-slate-300 font-mono">

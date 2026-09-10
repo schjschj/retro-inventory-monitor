@@ -28,6 +28,12 @@ import {
   calculateRealProgress, 
   formatDateDisplay 
 } from '../utils/excelParser';
+import { 
+  syncIncheonInventory, 
+  syncKokomoInventory, 
+  syncSpeInventory, 
+  syncShipments 
+} from '../services/inventoryService';
 
 export default function DataControlModal({
   isOpen,
@@ -118,27 +124,27 @@ export default function DataControlModal({
     }
     if (area === 'INCHEON' && !canEditIncheon) {
       sound.playAlert();
-      alert(lang === 'ko' ? '인천 사업장 담당자(PIN: 1001) 권한이 필요합니다.' : 'Incheon Station Lead permission required.');
+      alert(lang === 'ko' ? '인천 사업장 담당자 또는 관리자 권한이 필요합니다.' : 'Incheon Station Lead or Admin permission required.');
       return false;
     }
     if (area === 'SHIPMENTS' && !canEditShipments) {
       sound.playAlert();
-      alert(lang === 'ko' ? '인천 사업장 담당자(PIN: 1001) 권한이 필요합니다.' : 'Incheon Station Lead permission required.');
+      alert(lang === 'ko' ? '인천 사업장 담당자 또는 관리자 권한이 필요합니다.' : 'Incheon Station Lead or Admin permission required.');
       return false;
     }
     if (area === 'KOKOMO' && !canEditKokomo) {
       sound.playAlert();
-      alert(lang === 'ko' ? '미주법인 담당자(PIN: 2002) 권한이 필요합니다.' : 'US Corp Lead permission required.');
+      alert(lang === 'ko' ? '미주법인 담당자 또는 관리자 권한이 필요합니다.' : 'US Corp Lead or Admin permission required.');
       return false;
     }
     if (area === 'SPE' && !canEditSpe) {
       sound.playAlert();
-      alert(lang === 'ko' ? '미주법인 담당자(PIN: 2002) 권한이 필요합니다.' : 'US Corp Lead permission required.');
+      alert(lang === 'ko' ? '미주법인 담당자 또는 관리자 권한이 필요합니다.' : 'US Corp Lead or Admin permission required.');
       return false;
     }
     if (area === 'EXCEL' && !canUploadExcel) {
       sound.playAlert();
-      alert(lang === 'ko' ? '엑셀 업로드 권한(인천 담당자 또는 마스터 관리자)이 필요합니다.' : 'Excel upload permission required.');
+      alert(lang === 'ko' ? '엑셀 업로드 권한(인천 담당자 또는 관리자)이 필요합니다.' : 'Excel upload permission required.');
       return false;
     }
     return true;
@@ -212,28 +218,45 @@ export default function DataControlModal({
       return;
     }
     sound.playSuccess();
-    if (canEditIncheon) setIncheonInventory({ ...incheonInventory });
-    if (canEditShipments) setShipments([...shipments]);
-    if (canEditKokomo) {
-      setKokomoInventory({
-        ...kokomoInventory,
-        multiAssy: Number(kokomoForm.multiAssy) || 0,
-        capAssy: Number(kokomoForm.capAssy) || 0,
-        backShip: Number(kokomoForm.backShip) || 0
-      });
-    }
-    if (canEditSpe) {
-      setSpeInventory({
-        ...speInventory,
-        totalInventory: Number(speForm.totalInventory) || 0,
-        dailyConsumption: Number(speForm.dailyConsumption) || 1400
-      });
-    }
+
+    const updatedKokomo = {
+      ...kokomoInventory,
+      multiAssy: Number(kokomoForm.multiAssy) || 0,
+      capAssy: Number(kokomoForm.capAssy) || 0,
+      backShip: Number(kokomoForm.backShip) || 0
+    };
+
+    const updatedSpe = {
+      ...speInventory,
+      totalInventory: Number(speForm.totalInventory) || 0,
+      dailyConsumption: Number(speForm.dailyConsumption) || 1400
+    };
+
+    // Update state and explicitly trigger persistent sync for all
+    setIncheonInventory({ ...incheonInventory });
+    syncIncheonInventory(incheonInventory);
+
+    setShipments([...shipments]);
+    syncShipments(shipments);
+
+    setKokomoInventory(updatedKokomo);
+    syncKokomoInventory(updatedKokomo);
+
+    setSpeInventory(updatedSpe);
+    syncSpeInventory(updatedSpe);
+
+    try {
+      localStorage.setItem('tactical_incheon_inventory', JSON.stringify(incheonInventory));
+      localStorage.setItem('tactical_shipments', JSON.stringify(shipments));
+      localStorage.setItem('tactical_kokomo_inventory', JSON.stringify(updatedKokomo));
+      localStorage.setItem('tactical_spe_inventory', JSON.stringify(updatedSpe));
+    } catch(e) {}
+
     setUploadMessage({
       type: 'success',
       text: lang === 'ko' 
-        ? '✅ 모든 거점의 데이터가 클라우드 및 브라우저에 성공적으로 영구 저장되었습니다!' 
-        : '✅ All data successfully saved to cloud and storage!'
+        ? '✅ 전체 거점의 재고 및 운송 차수 데이터가 클라우드 및 브라우저에 영구 저장되었습니다!' 
+        : '✅ All inventory & shipment data successfully saved to cloud and storage!'
     });
   };
 
@@ -362,10 +385,14 @@ export default function DataControlModal({
         const railCount = data.filter(s => s.inlandMode === 'RAIL').length;
         const truckCount = data.filter(s => s.inlandMode === 'TRUCK').length;
         setShipments(data);
+        syncShipments(data);
+        try {
+          localStorage.setItem('tactical_shipments', JSON.stringify(data));
+        } catch(e) {}
         sound.playSuccess();
         setUploadMessage({
           type: 'success',
-          text: `성공: 미주 출하계획 ${data.length}개 차수를 성공적으로 등록하여 지도 및 전술 관제 대장에 즉시 반영했습니다! (철송: ${railCount}건, 싱글 트럭: ${truckCount}건)`
+          text: `성공: 미주 출하계획 ${data.length}개 차수를 정상 등록하여 클라우드 및 저장소에 영구 저장했습니다! (철송: ${railCount}건, 싱글 트럭: ${truckCount}건)`
         });
         return;
       }
@@ -414,11 +441,16 @@ export default function DataControlModal({
       });
 
       if (importedShipments.length > 0) {
-        setShipments([...importedShipments, ...shipments]);
+        const nextShipments = [...importedShipments, ...shipments];
+        setShipments(nextShipments);
+        syncShipments(nextShipments);
+        try {
+          localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
+        } catch(e) {}
         sound.playSuccess();
         setUploadMessage({
           type: 'success',
-          text: `성공: ${importedShipments.length} 건의 운송 차수를 정상적으로 등록 및 위치 반영했습니다!`
+          text: `성공: ${importedShipments.length} 건의 운송 차수를 등록하고 클라우드 및 저장소에 영구 저장했습니다!`
         });
       }
     } catch (err) {
@@ -632,8 +664,8 @@ export default function DataControlModal({
                     <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <span>
                       {lang === 'en'
-                        ? 'LOCKED: Incheon Lead PIN (1001) or Master Admin PIN (31796) required to add or modify shipments.'
-                        : '🔒 [수정 불가] 운송 차수 등록 및 진행률 변경이 잠겨 있습니다. (인천 담당자 PIN: 1001 또는 마스터 PIN: 31796 필요)'}
+                        ? 'LOCKED: Incheon Station Lead or Master Admin authorization required to add or modify shipments.'
+                        : '🔒 [수정 불가] 운송 차수 등록 및 진행률 변경 권한이 잠겨 있습니다. (인천 담당자 또는 관리자 로그인 필요)'}
                     </span>
                   </div>
                   {isViewer && (
@@ -860,8 +892,8 @@ export default function DataControlModal({
                     <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <span>
                       {lang === 'en'
-                        ? 'LOCKED: Incheon Lead PIN (1001) or Master Admin PIN (31796) required to edit Incheon stock.'
-                        : '🔒 [수정 불가] 인천 공정 로트 등록 및 승인이 잠겨 있습니다. (인천 담당자 PIN: 1001 또는 마스터 PIN: 31796 필요)'}
+                        ? 'LOCKED: Incheon Station Lead or Master Admin authorization required to edit Incheon stock.'
+                        : '🔒 [수정 불가] 인천 공정 로트 등록 및 승인 권한이 잠겨 있습니다. (인천 담당자 또는 관리자 로그인 필요)'}
                     </span>
                   </div>
                   {isViewer && (
@@ -1017,8 +1049,8 @@ export default function DataControlModal({
                     <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <span>
                       {lang === 'en'
-                        ? 'LOCKED: US Corp Lead PIN (2002) or Master Admin PIN (31796) required to edit US stock.'
-                        : '🔒 [수정 불가] 미주법인 및 SPE 재고 수정이 잠겨 있습니다. (미국 담당자 PIN: 2002 또는 마스터 PIN: 31796 필요)'}
+                        ? 'LOCKED: US Corp Lead or Master Admin authorization required to edit US stock.'
+                        : '🔒 [수정 불가] 미주법인 및 SPE 재고 수정 권한이 잠겨 있습니다. (미주법인 담당자 또는 관리자 로그인 필요)'}
                     </span>
                   </div>
                   {isViewer && (
@@ -1216,11 +1248,11 @@ export default function DataControlModal({
               <div className={`border-2 border-dashed p-6 text-center space-y-3 transition-opacity ${!canUploadExcel ? 'border-slate-800 bg-[#070b13] opacity-60' : 'border-cyan-500/70 bg-[#0b1424]'}`}>
                 <Upload className={`w-10 h-10 mx-auto ${!canUploadExcel ? 'text-slate-600' : 'text-cyan-400 animate-bounce'}`} />
                 <div>
-                  <h3 className="text-sm font-bold text-white">엑셀(.xlsx) 또는 CSV 파일 업로드</h3>
+                  <h3 className="text-sm font-bold text-white">{lang === 'en' ? 'Upload Excel (.xlsx) or CSV File' : '엑셀(.xlsx) 또는 CSV 파일 업로드'}</h3>
                   <p className="text-slate-400 text-xs mt-0.5">
                     {!canUploadExcel
-                      ? '🔒 [업로드 잠김] 인천 담당자 PIN(1001) 또는 마스터 PIN(31796) 로그인 후 업로드할 수 있습니다.'
-                      : '작성된 운송 데이터 파일을 드래그하거나 선택하여 즉시 대시보드 및 클라우드에 영구 반영하세요.'}
+                      ? (lang === 'en' ? '🔒 [Upload Locked] Station Lead or Admin authorization required to upload.' : '🔒 [업로드 잠김] 담당자 또는 관리자 로그인 후 업로드할 수 있습니다.')
+                      : (lang === 'en' ? 'Upload schedule file to instantly register and sync to cloud.' : '작성된 운송 데이터 파일을 선택하여 즉시 대시보드 및 클라우드에 영구 반영하세요.')}
                   </p>
                 </div>
                 <input
@@ -1245,8 +1277,21 @@ export default function DataControlModal({
                       : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer border-cyan-300 shadow'
                   }`}
                 >
-                  {!canUploadExcel ? '🔒 권한 필요 (로그인)' : '파일 찾아보기...'}
+                  {!canUploadExcel ? (lang === 'en' ? '🔒 Authorization Required (Login)' : '🔒 권한 필요 (로그인)') : (lang === 'en' ? 'Browse File...' : '파일 찾아보기...')}
                 </label>
+
+                {currentRole && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveAllData}
+                      className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold border border-emerald-400 rounded shadow flex items-center gap-1.5 mx-auto"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{lang === 'en' ? '💾 SAVE ALL DATA (Cloud & Local Storage)' : '💾 전체 데이터 저장 (클라우드 & 로컬 영구 반영)'}</span>
+                    </button>
+                  </div>
+                )}
 
                 {uploadMessage && (
                   <div className={`p-2 border text-xs font-bold ${

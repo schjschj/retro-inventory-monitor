@@ -26,11 +26,35 @@ import {
 import { isSupabaseConfigured } from './utils/supabaseClient';
 
 export default function App() {
-  // Global Data State
-  const [incheonInventory, setIncheonInventory] = useState(INITIAL_INCHEON_INVENTORY);
-  const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
-  const [kokomoInventory, setKokomoInventory] = useState(INITIAL_KOKOMO_INVENTORY);
-  const [speInventory, setSpeInventory] = useState(INITIAL_SPE_INVENTORY);
+  // Global Data State (Cached in LocalStorage for instant persistence)
+  const [incheonInventory, setIncheonInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tactical_incheon_inventory');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_INCHEON_INVENTORY;
+  });
+  const [shipments, setShipments] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tactical_shipments');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_SHIPMENTS;
+  });
+  const [kokomoInventory, setKokomoInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tactical_kokomo_inventory');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_KOKOMO_INVENTORY;
+  });
+  const [speInventory, setSpeInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tactical_spe_inventory');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_SPE_INVENTORY;
+  });
   const [customSpeCoords, setCustomSpeCoords] = useState(null);
 
   // Security Clearance / Station Role Mode (Default: Read-Only Viewer)
@@ -385,6 +409,9 @@ export default function App() {
         setShowPhotos={setShowPhotos}
         commanderPhotos={commanderPhotos}
         onUpdateCommanderPhoto={handleUpdateCommanderPhoto}
+        isAdmin={isAdmin}
+        authRole={authRole}
+        onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
       />
 
       {/* Admin Passcode Authentication Modal */}

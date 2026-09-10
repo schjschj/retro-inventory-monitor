@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   X, 
   Settings, 
@@ -8,15 +8,21 @@ import {
   RotateCcw, 
   Type, 
   PauseCircle, 
-  FastForward,
-  Globe,
-  Camera,
-  Upload,
-  User
+  FastForward, 
+  Globe, 
+  Camera, 
+  Upload, 
+  User, 
+  Lock, 
+  Key, 
+  ShieldCheck, 
+  CheckCircle2, 
+  AlertTriangle 
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { KEY_NODES } from '../utils/geoCoordinates';
 import { t } from '../utils/i18n';
+import { getAuthPins, saveAuthPins } from '../utils/authConfig';
 
 export default function SettingsModal({
   isOpen,
@@ -43,10 +49,45 @@ export default function SettingsModal({
   showPhotos = true,
   setShowPhotos,
   commanderPhotos,
-  onUpdateCommanderPhoto
+  onUpdateCommanderPhoto,
+  isAdmin = false,
+  authRole = null,
+  onOpenAdminAuth
 }) {
   const incheonInputRef = useRef(null);
   const kokomoInputRef = useRef(null);
+
+  const isMasterAdmin = isAdmin || authRole === 'MASTER_ADMIN';
+  const [pinForm, setPinForm] = useState({ master: '', incheon: '', usa: '' });
+  const [pinSuccessMsg, setPinSuccessMsg] = useState('');
+  const [pinErrorMsg, setPinErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setPinForm(getAuthPins());
+      setPinSuccessMsg('');
+      setPinErrorMsg('');
+    }
+  }, [isOpen]);
+
+  const handleSavePins = (e) => {
+    e.preventDefault();
+    if (!pinForm.master || !pinForm.incheon || !pinForm.usa) {
+      sound.playAlert();
+      setPinErrorMsg(lang === 'ko' ? '모든 비밀번호(PIN)를 입력해주세요.' : 'Please enter all PIN fields.');
+      return;
+    }
+    const res = saveAuthPins(pinForm);
+    if (res.success) {
+      sound.playSuccess();
+      setPinErrorMsg('');
+      setPinSuccessMsg(lang === 'ko' ? '✅ 보안 비밀번호(PIN)가 성공적으로 변경되었습니다!' : '✅ Security PINs updated successfully!');
+      setTimeout(() => setPinSuccessMsg(''), 4000);
+    } else {
+      sound.playAlert();
+      setPinErrorMsg(lang === 'ko' ? '비밀번호 저장 중 오류가 발생했습니다.' : 'Error saving security PINs.');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -530,20 +571,135 @@ export default function SettingsModal({
             </div>
           </div>
 
+          {/* 5.5 Security PIN Management */}
+          <div className="bg-[#101b2d] border border-amber-500/70 p-3.5 space-y-3 shadow">
+            <div className="flex items-center justify-between border-b border-amber-600/50 pb-2">
+              <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-amber-400" />
+                <span>{lang === 'en' ? 'Security PINs & Password Configuration' : '보안 PIN 및 관리자 비밀번호 변경'}</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 border font-bold rounded ${
+                isMasterAdmin ? 'bg-emerald-950 border-emerald-500 text-emerald-300' : 'bg-rose-950 border-rose-500 text-rose-300'
+              }`}>
+                {isMasterAdmin ? (lang === 'en' ? 'ADMIN UNLOCKED' : '관리자 권한 인가됨') : (lang === 'en' ? 'LOCKED (VIEWER)' : '잠김 (권한 필요)')}
+              </span>
+            </div>
+
+            {isMasterAdmin ? (
+              <form onSubmit={handleSavePins} className="space-y-3">
+                <p className="text-[11px] text-slate-300">
+                  {lang === 'en' 
+                    ? 'Manage passcodes for station leads and master administrator. Changes take effect immediately.' 
+                    : '각 거점 담당자 및 마스터 관리자의 보안 비밀번호(PIN)를 변경할 수 있습니다.'}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                      {lang === 'en' ? 'Master Admin PIN:' : '마스터 관리자 암호:'}
+                    </label>
+                    <input
+                      type="password"
+                      value={pinForm.master}
+                      onChange={(e) => setPinForm({ ...pinForm, master: e.target.value })}
+                      className="w-full bg-[#070d18] border border-amber-500/80 px-2 py-1.5 text-xs text-amber-200 font-bold font-mono outline-none focus:border-cyan-400 rounded"
+                      placeholder="••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                      {lang === 'en' ? 'Incheon Lead PIN:' : '인천 담당자 PIN:'}
+                    </label>
+                    <input
+                      type="password"
+                      value={pinForm.incheon}
+                      onChange={(e) => setPinForm({ ...pinForm, incheon: e.target.value })}
+                      className="w-full bg-[#070d18] border border-cyan-500/80 px-2 py-1.5 text-xs text-cyan-200 font-bold font-mono outline-none focus:border-cyan-400 rounded"
+                      placeholder="••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-300 mb-1">
+                      {lang === 'en' ? 'US Corp Lead PIN:' : '미주법인 담당자 PIN:'}
+                    </label>
+                    <input
+                      type="password"
+                      value={pinForm.usa}
+                      onChange={(e) => setPinForm({ ...pinForm, usa: e.target.value })}
+                      className="w-full bg-[#070d18] border border-cyan-500/80 px-2 py-1.5 text-xs text-cyan-200 font-bold font-mono outline-none focus:border-cyan-400 rounded"
+                      placeholder="••••"
+                    />
+                  </div>
+                </div>
+
+                {pinErrorMsg && (
+                  <div className="p-2 bg-rose-950/80 border border-rose-500 text-rose-300 text-[11px] font-bold flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{pinErrorMsg}</span>
+                  </div>
+                )}
+
+                {pinSuccessMsg && (
+                  <div className="p-2 bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{pinSuccessMsg}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs rounded border border-amber-300 shadow flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{lang === 'en' ? 'Save PINs' : '비밀번호 변경 저장'}</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-3 bg-[#080d16] border border-slate-700 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-slate-400 text-xs">
+                  <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>{lang === 'en' ? 'Master Admin login required to modify station and admin PINs.' : '관리자(마스터) 로그인 시에만 비밀번호를 변경할 수 있습니다.'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playClick();
+                    if (onOpenAdminAuth) onOpenAdminAuth();
+                  }}
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded shadow whitespace-nowrap"
+                >
+                  {lang === 'en' ? 'Admin Login' : '관리자 로그인'}
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* 6. Footer Actions */}
           <div className="pt-2 flex justify-between items-center border-t border-slate-800">
             <button
               onClick={() => {
-                if (confirm(lang === 'ko' ? '초기 목데이터 상태로 복원하시겠습니까?' : 'Restore initial demo dataset?')) {
+                if (!isMasterAdmin) {
+                  sound.playAlert();
+                  alert(lang === 'ko' ? '초기 데모 데이터셋 복원은 관리자(마스터) 권한으로 로그인해야 가능합니다.' : 'Restoring demo dataset requires Master Admin clearance.');
+                  if (onOpenAdminAuth) onOpenAdminAuth();
+                  return;
+                }
+                if (confirm(lang === 'ko' ? '초기 목데이터 상태로 복원하시겠습니까? (현재 입력된 모든 재고와 운송 차수가 초기화됩니다)' : 'Restore initial demo dataset?')) {
                   sound.playClick();
                   onResetData();
                   onClose();
                 }
               }}
-              className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-[11px] underline"
+              className={`flex items-center gap-1 text-[11px] underline ${
+                isMasterAdmin ? 'text-rose-400 hover:text-rose-300 cursor-pointer' : 'text-slate-500 cursor-not-allowed'
+              }`}
+              title={isMasterAdmin ? '' : (lang === 'ko' ? '관리자 권한 필요' : 'Admin clearance required')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              {t('resetDemoBtn', lang)}
+              <span>{t('resetDemoBtn', lang)}</span>
+              {!isMasterAdmin && <Lock className="w-3 h-3 text-slate-500 inline ml-0.5" />}
             </button>
 
             <button

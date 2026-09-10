@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Lock, Unlock, Key, X, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 
+import { verifyPin } from '../utils/authConfig';
+
 export default function AdminAuthModal({
   isOpen,
   onClose,
@@ -15,23 +17,12 @@ export default function AdminAuthModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (password === '1001') {
+    const verifiedRole = verifyPin(password);
+    if (verifiedRole) {
       sound.playSuccess();
       setErrorMsg('');
       setPassword('');
-      onSuccess('INCHEON_LEAD');
-      onClose();
-    } else if (password === '2002') {
-      sound.playSuccess();
-      setErrorMsg('');
-      setPassword('');
-      onSuccess('USA_LEAD');
-      onClose();
-    } else if (password === '31796') {
-      sound.playSuccess();
-      setErrorMsg('');
-      setPassword('');
-      onSuccess('MASTER_ADMIN');
+      onSuccess(verifiedRole);
       onClose();
     } else {
       sound.playAlert();

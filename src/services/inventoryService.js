@@ -70,7 +70,9 @@ export async function fetchAllInventoryData() {
           origin: row.origin,
           portOfEntry: row.port_of_entry,
           destination: row.destination,
-          overlandMode: row.overland_mode
+          inlandMode: row.overland_mode === 'TRUCK' ? 'TRUCK' : 'RAIL',
+          shippingMethod: row.overland_mode === 'TRUCK' ? '싱글' : '철송',
+          overlandMode: row.overland_mode || 'RAIL'
         }))
       : parsedShipments;
 
@@ -176,24 +178,24 @@ export async function syncShipments(shipments) {
   if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
-    const rows = shipments.map(s => ({
-      id: s.id,
-      batch_no: s.batchNo,
-      type: s.type,
-      container_no: s.containerNo || '',
-      vessel_name: s.vesselName || '',
-      departure_date: s.departureDate,
-      eta: s.eta,
-      quantity: Number(s.quantity) || 0,
-      items: s.items || [],
-      status: s.status,
-      progress: Number(s.progress) || 0,
+    const rows = shipments.map((s, idx) => ({
+      id: String(s.id || `SHIP-${s.batchNo || idx}-${idx}`),
+      batch_no: String(s.batchNo || `차수 #${idx + 1}`),
+      type: String(s.type || 'SEA').toUpperCase().includes('AIR') ? 'AIR' : 'SEA',
+      container_no: String(s.containerNo || ''),
+      vessel_name: String(s.vesselName || ''),
+      departure_date: String(s.departureDate || '2026-09-02'),
+      eta: String(s.eta || '2026-09-20'),
+      quantity: Math.round(Number(s.quantity) || 0),
+      items: Array.isArray(s.items) ? s.items : [],
+      status: s.status || (Number(s.progress) >= 100 ? 'ARRIVED' : 'TRANSIT_OCEAN'),
+      progress: Math.round(Number(s.progress) || 0), // Integer for BIGINT
       is_delayed: Boolean(s.isDelayed),
-      delay_reason: s.delayReason || '',
-      origin: s.origin || '인천신항 (KR)',
-      port_of_entry: s.portOfEntry || 'LA 롱비치 항만 (US)',
-      destination: s.destination || '코코모 미주법인 (US)',
-      overland_mode: s.overlandMode || 'RAIL',
+      delay_reason: String(s.delayReason || ''),
+      origin: String(s.origin || (s.type === 'AIR' ? '인천국제공항 (KR)' : '인천신항 (KR)')),
+      port_of_entry: String(s.portOfEntry || (s.type === 'AIR' ? '시카고 오헤어 (ORD)' : 'LA 롱비치 항만 (US)')),
+      destination: String(s.destination || '코코모 미주법인 (US)'),
+      overland_mode: (s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK') ? 'TRUCK' : 'RAIL',
       updated_at: new Date().toISOString()
     }));
 
