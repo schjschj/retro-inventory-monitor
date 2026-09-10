@@ -1,0 +1,768 @@
+import fs from 'fs';
+import path from 'path';
+
+const dataControlModalContent = `import React, { useState } from 'react';
+import { 
+  X, 
+  Plus, 
+  Trash2, 
+  Download, 
+  Upload, 
+  Ship, 
+  Plane, 
+  Truck, 
+  Factory, 
+  Building2, 
+  FileSpreadsheet, 
+  CheckCircle,
+  Clock
+import { 
+  exportToExcel, 
+  downloadSampleTemplate, 
+  parseUploadedFile, 
+  normalizeDateSafe, 
+  calculateRealProgress,
+  formatDateDisplay 
+} from '../utils/excelParser';
+
+export default function DataControlModal({
+  isOpen,
+  onClose,
+  incheonInventory,
+  setIncheonInventory,
+  shipments,
+  setShipments,
+  kokomoInventory,
+  setKokomoInventory,
+  speInventory,
+  setSpeInventory
+}) {
+  const [activeTab, setActiveTab] = useState('SHIPMENTS');
+  const [uploadMessage, setUploadMessage] = useState(null);
+
+  const [newShipment, setNewShipment] = useState({
+    batchNo: '',
+    type: 'SEA',
+    vesselName: '',
+    containerNo: '',
+    quantity: 5000,
+    departureDate: new Date().toISOString().slice(0, 16),
+    eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
+    progress: 0,
+    isDelayed: false,
+    origin: '인천신항 (KR)',
+    portOfEntry: 'LA 롱비치 항만 (US)',
+    destination: '코코모 미주법인 (US)'
+  });
+
+  const [newLot, setNewLot] = useState({
+    id: \`LOT-KR-\${Date.now().toString().slice(-4)}\`,
+    name: 'Multi Assy Standard',
+    quantity: 2000,
+    date: new Date().toISOString().slice(0, 10),
+    status: '검사대기',
+    note: '공정 완료 수입검사 대기'
+  });
+
+  if (!isOpen) return null;
+
+  const handleAddShipment = (e) => {
+    e.preventDefault();
+    if (!newShipment.batchNo || !newShipment.vesselName) {
+      alert('차수명과 운송체명을 입력하세요.');
+      return;
+    }
+
+    const created = {
+      ...newShipment,
+      id: \`SHIP-\${newShipment.type}-\${Date.now().toString().slice(-4)}\`,
+      quantity: Number(newShipment.quantity),
+      progress: Number(newShipment.progress),
+      items: [
+        { name: 'Multi Assy', qty: Math.round(newShipment.quantity * 0.6) },
+        { name: 'Cap Assy', qty: Math.round(newShipment.quantity * 0.4) }
+      ]
+    };
+
+    setShipments([created, ...shipments]);
+    sound.playSuccess();
+    setNewShipment({
+      batchNo: '',
+      type: 'SEA',
+      vesselName: '',
+      containerNo: '',
+      quantity: 5000,
+      departureDate: new Date().toISOString().slice(0, 16),
+      eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
+      progress: 0,
+      isDelayed: false,
+      origin: '인천신항 (KR)',
+      portOfEntry: 'LA 롱비치 항만 (US)',
+      destination: '코코모 미주법인 (US)'
+    });
+  };
+
+  const handleDeleteShipment = (id) => {
+    sound.playClick();
+    setShipments(shipments.filter(s => s.id !== id));
+  };
+
+  const handleToggleDelay = (id) => {
+    sound.playToggle();
+    setShipments(shipments.map(s => {
+      if (s.id === id) {
+        return {
+          ...s,
+          isDelayed: !s.isDelayed,
+          delayReason: !s.isDelayed ? '통관 및 환적 대기 지연' : null
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleProgressChange = (id, progress) => {
+    setShipments(shipments.map(s => {
+      if (s.id === id) {
+        return { ...s, progress: Number(progress) };
+      }
+      return s;
+    }));
+  };
+
+  const handleApproveLot = (lotId) => {
+    sound.playSuccess();
+    const target = incheonInventory.waitingInspection.find(l => l.id === lotId);
+    if (!target) return;
+
+    setIncheonInventory({
+      waitingInspection: incheonInventory.waitingInspection.filter(l => l.id !== lotId),
+      passedInspection: [
+        { ...target, status: '출하합격', readyForExport: true },
+        ...incheonInventory.passedInspection
+      ]
+    });
+  };
+
+  const handleAddLot = (e) => {
+    e.preventDefault();
+    sound.playSuccess();
+    setIncheonInventory({
+      ...incheonInventory,
+      waitingInspection: [
+        { ...newLot, quantity: Number(newLot.quantity) },
+        ...incheonInventory.waitingInspection
+      ]
+    });
+    setNewLot({
+      id: \`LOT-KR-\${Date.now().toString().slice(-4)}\`,
+      name: 'Multi Assy Standard',
+      quantity: 2000,
+      date: new Date().toISOString().slice(0, 10),
+      status: '검사대기',
+      note: '공정 완료'
+    });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await parseUploadedFile(file);
+      sound.playSuccess();
+      setUploadMessage({
+        type: 'success',
+        text: \`성공: \${data.length}건의 데이터를 성공적으로 분석했습니다.\`
+      });
+
+      const importedShipments = data.map((row, idx) => {
+        const batchNo = row['차수명'] || row['차수ID'] || row['Batch No'] || row['차수'] || \`신규 차수 #\${idx + 1}\`;
+        const rawType = String(row['운송수단(SEA/AIR)'] || row['운송수단'] || row['Type'] || 'SEA').toUpperCase();
+        const type = rawType.includes('AIR') ? 'AIR' : rawType.includes('TRUCK') ? 'TRUCK' : 'SEA';
+        const containerNo = String(row['컨테이너번호'] || row['컨테이너/편명'] || row['Container'] || \`CTN-\${8000 + idx}\`);
+        const vesselName = String(row['선박/항공기명'] || row['편명'] || row['Vessel'] || 'CARRIER-GLOBAL');
+        
+        const rawDep = row['출발일(YYYY-MM-DD)'] || row['출발일'] || row['출항일'] || '2026-09-02';
+        const rawEta = row['도착예상일(YYYY-MM-DD)'] || row['도착예상일(ETA)'] || row['도착예상일'] || row['ETA'] || '2026-09-20';
+        
+        const departureDate = normalizeDateSafe(rawDep, new Date('2026-09-02'));
+        const eta = normalizeDateSafe(rawEta, new Date('2026-09-20'));
+        const quantity = Number(row['수량(EA)'] || row['수량'] || row['Quantity']) || 5000;
+        
+        const progress = calculateRealProgress(departureDate, eta, new Date('2026-09-09T09:00:00'));
+        const isDelayed = new Date('2026-09-09T09:00:00') > new Date(eta);
+
+        return {
+          id: \`IMPORT-\${idx}-\${Date.now().toString().slice(-4)}\`,
+          batchNo,
+          type,
+          containerNo,
+          vesselName,
+          departureDate,
+          eta,
+          quantity,
+          progress,
+          isDelayed,
+          delayReason: isDelayed ? 'ETA 경과 지연' : null,
+          items: [
+            { name: 'Multi Assy', qty: Math.round(quantity * 0.6) },
+            { name: 'Cap Assy', qty: Math.round(quantity * 0.4) }
+          ],
+          origin: type === 'AIR' ? '인천공항 (KR)' : '인천신항 (KR)',
+          portOfEntry: type === 'AIR' ? '시카고 오헤어 (ORD)' : 'LA 롱비치 항만 (US)',
+          destination: '코코모 미주법인 (US)'
+        };
+      });
+
+      if (importedShipments.length > 0) {
+        setShipments([...importedShipments, ...shipments]);
+        sound.playSuccess();
+        setUploadMessage({
+          type: 'success',
+          text: \`성공: \${importedShipments.length} 건의 운송 차수를 정상적으로 등록 및 위치 반영했습니다!\`
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      sound.playAlert();
+      setUploadMessage({
+        type: 'error',
+        text: \`파일 분석 실패: \${err.message || '지원되는 엑셀(.xlsx) 또는 CSV 파일 형식을 확인해주세요.'}\`
+      });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-mono animate-fadeIn">
+      <div className="pixel-box bg-[#0c1322] border-2 border-cyan-400 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.4)]">
+        
+        <div className="bg-[#131f35] px-4 py-3 border-b border-cyan-500/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-cyan-400 animate-pulse"></span>
+            <h2 className="text-sm md:text-base font-bold text-cyan-300">
+              [데이터 통제 센터] 재고 관리 & 엑셀 입출력
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              sound.playClick();
+              onClose();
+            }}
+            className="p-1 hover:bg-[#203352] text-slate-400 hover:text-white rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex border-b border-slate-700 bg-[#090e1a] text-xs">
+          <button
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('SHIPMENTS');
+            }}
+            className={\`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors \${
+              activeTab === 'SHIPMENTS' 
+                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }\`}
+          >
+            <Ship className="w-4 h-4" />
+            <span>해상/항공 운송 차수 ({shipments.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('INCHEON');
+            }}
+            className={\`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors \${
+              activeTab === 'INCHEON' 
+                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }\`}
+          >
+            <Factory className="w-4 h-4" />
+            <span>인천 로트 관리 ({incheonInventory.waitingInspection.length + incheonInventory.passedInspection.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('US_STOCK');
+            }}
+            className={\`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors \${
+              activeTab === 'US_STOCK' 
+                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }\`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>미주법인 & SPE 재고</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('EXCEL');
+            }}
+            className={\`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors \${
+              activeTab === 'EXCEL' 
+                ? 'border-emerald-400 text-emerald-300 bg-[#0d261e]' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }\`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>엑셀(Excel) 연동</span>
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+          {activeTab === 'SHIPMENTS' && (
+            <div className="space-y-4">
+              <form onSubmit={handleAddShipment} className="bg-[#101b2d] border border-cyan-700/60 p-3.5 space-y-3">
+                <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
+                  <Plus className="w-4 h-4" /> 신규 운송 차수 등록
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">차수명</label>
+                    <input
+                      type="text"
+                      placeholder="예: 해상 26-05차"
+                      value={newShipment.batchNo}
+                      onChange={e => setNewShipment({ ...newShipment, batchNo: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">운송 모드</label>
+                    <select
+                      value={newShipment.type}
+                      onChange={e => setNewShipment({ ...newShipment, type: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                    >
+                      <option value="SEA">해상 컨테이너선 (SEA)</option>
+                      <option value="AIR">항공 화물기 (AIR)</option>
+                      <option value="TRUCK">내륙 직송 트럭 (TRUCK)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">선박/편명</label>
+                    <input
+                      type="text"
+                      placeholder="예: HMM OLYMPUS"
+                      value={newShipment.vesselName}
+                      onChange={e => setNewShipment({ ...newShipment, vesselName: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">적재 수량 (EA)</label>
+                    <input
+                      type="number"
+                      value={newShipment.quantity}
+                      onChange={e => setNewShipment({ ...newShipment, quantity: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">컨테이너/화물 번호</label>
+                    <input
+                      type="text"
+                      placeholder="예: MSCU-99120-1"
+                      value={newShipment.containerNo}
+                      onChange={e => setNewShipment({ ...newShipment, containerNo: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">출항일시</label>
+                    <input
+                      type="datetime-local"
+                      value={newShipment.departureDate}
+                      onChange={e => setNewShipment({ ...newShipment, departureDate: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none text-[11px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">도착예상일 (ETA)</label>
+                    <input
+                      type="datetime-local"
+                      value={newShipment.eta}
+                      onChange={e => setNewShipment({ ...newShipment, eta: e.target.value })}
+                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none text-[11px]"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold p-1.5 border border-cyan-400 shadow flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> 차수 추가
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="space-y-2">
+                <div className="text-slate-400 font-bold flex justify-between">
+                  <span>현재 운송중인 차수 목록</span>
+                  <span className="text-slate-500">진행률 슬라이더로 위치를 즉시 조정할 수 있습니다.</span>
+                </div>
+
+                <div className="space-y-2">
+                  {shipments.map(s => (
+                    <div key={s.id} className="p-3 bg-[#0d1624] border border-slate-700 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-[#17253b] border border-slate-600">
+                          {s.type === 'SEA' ? <Ship className="w-5 h-5 text-cyan-400" /> : s.type === 'AIR' ? <Plane className="w-5 h-5 text-sky-400" /> : <Truck className="w-5 h-5 text-amber-400" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm">{s.batchNo}</span>
+                            <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 border border-slate-600 text-slate-300">
+                              {s.vesselName} ({s.containerNo})
+                            </span>
+                            {s.isDelayed && (
+                              <span className="text-[10px] px-1.5 py-0.2 bg-rose-950 border border-rose-500 text-rose-400 font-bold animate-pulse">
+                                ETA 지연중
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            적재량: <span className="text-amber-300 font-bold">{s.quantity.toLocaleString()} EA</span> | ETA: {s.eta.slice(0, 16).replace('T', ' ')}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-36">
+                          <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>위치 진행률</span>
+                            <span className="text-cyan-400 font-bold">{Math.round(s.progress)}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={s.progress}
+                            onChange={(e) => handleProgressChange(s.id, e.target.value)}
+                            className="w-full accent-cyan-400 cursor-pointer"
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => handleToggleDelay(s.id)}
+                          className={\`px-2 py-1 border text-[11px] font-bold \${
+                            s.isDelayed 
+                              ? 'bg-rose-950 border-rose-500 text-rose-300' 
+                              : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
+                          }\`}
+                        >
+                          {s.isDelayed ? '지연 해제' : '지연 처리'}
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteShipment(s.id)}
+                          className="p-1.5 bg-[#261517] hover:bg-rose-900 border border-rose-700 text-rose-300 rounded"
+                          title="차수 삭제"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'INCHEON' && (
+            <div className="space-y-4">
+              <form onSubmit={handleAddLot} className="bg-[#0f1d2c] border border-cyan-800 p-3 space-y-2">
+                <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
+                  <Plus className="w-4 h-4" /> 인천 신규 생산 로트 등록
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">로트 번호</label>
+                    <input
+                      type="text"
+                      value={newLot.id}
+                      onChange={e => setNewLot({ ...newLot, id: e.target.value })}
+                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">품목명</label>
+                    <input
+                      type="text"
+                      value={newLot.name}
+                      onChange={e => setNewLot({ ...newLot, name: e.target.value })}
+                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">수량 (EA)</label>
+                    <input
+                      type="number"
+                      value={newLot.quantity}
+                      onChange={e => setNewLot({ ...newLot, quantity: e.target.value })}
+                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold p-1.5 border border-cyan-400 text-xs"
+                    >
+                      검사대기 로트 등록
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-amber-500/50 bg-[#16140d] p-3">
+                  <div className="flex items-center justify-between border-b border-amber-800 pb-1.5 mb-2">
+                    <span className="font-bold text-amber-300 flex items-center gap-1">
+                      <Clock className="w-4 h-4" /> 검사대기 목록
+                    </span>
+                    <span className="text-[10px] text-amber-400">
+                      총 {incheonInventory.waitingInspection.reduce((a, b) => a + b.quantity, 0).toLocaleString()} EA
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {incheonInventory.waitingInspection.map(lot => (
+                      <div key={lot.id} className="p-2 bg-[#201d14] border border-amber-700/60 flex items-center justify-between">
+                        <div>
+                          <div className="text-white font-bold">{lot.id}</div>
+                          <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
+                        </div>
+                        <button
+                          onClick={() => handleApproveLot(lot.id)}
+                          className="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[10px] border border-emerald-400"
+                        >
+                          출하합격 승인
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border border-emerald-500/50 bg-[#0d1c16] p-3">
+                  <div className="flex items-center justify-between border-b border-emerald-800 pb-1.5 mb-2">
+                    <span className="font-bold text-emerald-300 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" /> 출하합격 (선적 준비완료)
+                    </span>
+                    <span className="text-[10px] text-emerald-400">
+                      총 {incheonInventory.passedInspection.reduce((a, b) => a + b.quantity, 0).toLocaleString()} EA
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {incheonInventory.passedInspection.map(lot => (
+                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 flex items-center justify-between">
+                        <div>
+                          <div className="text-white font-bold">{lot.id}</div>
+                          <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
+                        </div>
+                        <span className="text-emerald-400 font-bold text-[10px] border border-emerald-600 px-1.5 py-0.5">
+                          수출 선적대기
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'US_STOCK' && (
+            <div className="space-y-4">
+              <div className="bg-[#18120b] border border-amber-600 p-3 space-y-3">
+                <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
+                  <Building2 className="w-4 h-4" /> 미주법인 (코코모) 재고 직접 조정
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-cyan-300 text-[11px] mb-1 font-bold">Multi Assy 수량 (EA)</label>
+                    <input
+                      type="number"
+                      value={kokomoInventory.multiAssy}
+                      onChange={e => setKokomoInventory({ ...kokomoInventory, multiAssy: Number(e.target.value) })}
+                      className="w-full bg-[#0c121d] border border-cyan-600 p-2 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-emerald-300 text-[11px] mb-1 font-bold">Cap Assy 수량 (EA)</label>
+                    <input
+                      type="number"
+                      value={kokomoInventory.capAssy}
+                      onChange={e => setKokomoInventory({ ...kokomoInventory, capAssy: Number(e.target.value) })}
+                      className="w-full bg-[#0c121d] border border-emerald-600 p-2 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-rose-300 text-[11px] mb-1 font-bold">Back ship 수량 (EA)</label>
+                    <input
+                      type="number"
+                      value={kokomoInventory.backShip}
+                      onChange={e => setKokomoInventory({ ...kokomoInventory, backShip: Number(e.target.value) })}
+                      className="w-full bg-[#0c121d] border border-rose-600 p-2 text-white font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="text-[11px] text-amber-300/80">
+                  * 미주법인 전체 재고는 세 품목의 합계로 지도 및 상단 HUD에 자동 반영됩니다.
+                </div>
+              </div>
+
+              <div className="bg-[#0b1c14] border border-emerald-600 p-3 space-y-3">
+                <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
+                  <Factory className="w-4 h-4" /> 고객 SPE 재고 및 소진율 조정
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 text-[11px] mb-1">고객 보유 총재고 (EA)</label>
+                    <input
+                      type="number"
+                      value={speInventory.totalInventory}
+                      onChange={e => setSpeInventory({ ...speInventory, totalInventory: Number(e.target.value) })}
+                      className="w-full bg-[#07130e] border border-emerald-600 p-2 text-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 text-[11px] mb-1">일일 소진량 (EA/일)</label>
+                    <input
+                      type="number"
+                      value={speInventory.dailyConsumption}
+                      onChange={e => setSpeInventory({ ...speInventory, dailyConsumption: Number(e.target.value) })}
+                      className="w-full bg-[#07130e] border border-emerald-600 p-2 text-white font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'EXCEL' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-cyan-600 bg-[#0e1828] p-4 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="font-bold text-cyan-300 text-sm flex items-center gap-2">
+                      <Download className="w-5 h-5 text-cyan-400" />
+                      현재 재고·물류 엑셀 내보내기
+                    </div>
+                    <p className="text-slate-400 text-xs mt-1">
+                      인천 재고(로트), 운송 차수(ETA, 위치), 미주법인(Multi/Cap/Back ship), SPE 고객재고를 통합 엑셀(.xlsx) 파일로 다운로드합니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      sound.playSuccess();
+                      exportToExcel(incheonInventory, shipments, kokomoInventory, speInventory);
+                    }}
+                    className="w-full py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-bold border border-cyan-400 shadow flex items-center justify-center gap-2"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    전체 데이터 엑셀(.xlsx) 다운로드
+                  </button>
+                </div>
+
+                <div className="border border-emerald-600 bg-[#0e241b] p-4 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="font-bold text-emerald-300 text-sm flex items-center gap-2">
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                      차수 업로드용 템플릿 다운로드
+                    </div>
+                    <p className="text-slate-400 text-xs mt-1">
+                      새로운 운송 차수나 대량 데이터를 업로드하기 위한 사전 양식을 다운로드합니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      downloadSampleTemplate();
+                    }}
+                    className="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold border border-emerald-400 shadow flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    업로드용 샘플 템플릿 받기
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-2 border-dashed border-cyan-500/70 bg-[#0b1424] p-6 text-center space-y-3">
+                <Upload className="w-10 h-10 text-cyan-400 mx-auto animate-bounce" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">엑셀(.xlsx) 또는 CSV 파일 업로드</h3>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    작성된 운송 데이터 파일을 드래그하거나 선택하여 즉시 대시보드에 반영하세요.
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="excelFileInput"
+                />
+                <label
+                  htmlFor="excelFileInput"
+                  className="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold cursor-pointer border border-cyan-300 shadow transition-colors"
+                >
+                  파일 찾아보기...
+                </label>
+
+                {uploadMessage && (
+                  <div className={\`p-2 border text-xs font-bold \${
+                    uploadMessage.type === 'success' 
+                      ? 'bg-emerald-950 border-emerald-500 text-emerald-300' 
+                      : 'bg-rose-950 border-rose-500 text-rose-300'
+                  }\`}>
+                    {uploadMessage.text}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-[#101b2d] px-4 py-2.5 border-t border-slate-700 flex justify-end">
+          <button
+            onClick={() => {
+              sound.playClick();
+              onClose();
+            }}
+            className="px-4 py-1.5 bg-[#1f2e46] hover:bg-[#2b3e5e] text-white border border-slate-500 font-bold"
+          >
+            닫기
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+`;
+
+fs.writeFileSync(path.resolve('./src/components/DataControlModal.jsx'), dataControlModalContent, 'utf8');
+console.log('DataControlModal.jsx created successfully.');

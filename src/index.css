@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    background-color: #070a12;
+    color: #f1f5f9;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+  }
+}
+
+/* Optional Ultra-Crisp CRT Screen Overlay (zero blur, purely subtle aesthetic lines) */
+.crt-overlay::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 22, 32, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* Retro Pixel Border */
+.pixel-box {
+  border: 1.5px solid #23354d;
+  box-shadow: 0 0 0 1px #0b121e;
+  position: relative;
+}
+
+.pixel-box-active {
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+}
+
+.pixel-box-warning {
+  border-color: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.3);
+}
+
+/* Custom Scrollbar for Retro feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b111c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #23354d;
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+/* Crisp Accent Text Classes (No blur, high legibility) */
+.text-neon-cyan {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.text-neon-green {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.text-neon-yellow {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.text-neon-red {
+  color: #f43f5e;
+  font-weight: 700;
+}
