@@ -41,10 +41,15 @@ export default function InventorySummaryHud({
   const incheonPassed = (incheonInventory.passedInspection || []).reduce((a, b) => a + (Number(b.quantity) || 0), 0);
   const incheonTotal = incheonWaiting + incheonPassed;
 
-  const transitTotal = (shipments || []).reduce((a, b) => a + (Number(b.quantity) || 0), 0);
-  const seaShipments = (shipments || []).filter(s => s.type === 'SEA');
-  const airShipments = (shipments || []).filter(s => s.type === 'AIR');
-  const delayedShipments = (shipments || []).filter(s => s.isDelayed);
+  // Active In-Transit vs Arrived at Kokomo
+  const activeTransitShipments = (shipments || []).filter(s => (Number(s.progress) || 0) < 100);
+  const arrivedShipments = (shipments || []).filter(s => (Number(s.progress) || 0) >= 100);
+  const transitTotal = activeTransitShipments.reduce((a, b) => a + (Number(b.quantity) || 0), 0);
+  const arrivedTotal = arrivedShipments.reduce((a, b) => a + (Number(b.quantity) || 0), 0);
+
+  const seaShipments = activeTransitShipments.filter(s => s.type === 'SEA');
+  const airShipments = activeTransitShipments.filter(s => s.type === 'AIR');
+  const delayedShipments = activeTransitShipments.filter(s => s.isDelayed);
 
   const kokomoTotal = (Number(kokomoInventory.multiAssy) || 0) + (Number(kokomoInventory.capAssy) || 0) + (Number(kokomoInventory.backShip) || 0);
   const speTotal = Number(speInventory.totalInventory) || 0;
@@ -325,6 +330,12 @@ export default function InventorySummaryHud({
                     {transitTotal.toLocaleString()} EA
                   </span>
                 </div>
+                {arrivedShipments.length > 0 && includedCategories.transit && (
+                  <div className="text-[9px] text-slate-400 pl-6 flex justify-between pt-0.5 border-t border-slate-800/60 mt-1">
+                    <span>운송중: {activeTransitShipments.length}건</span>
+                    <span className="text-emerald-400 font-mono">코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)</span>
+                  </div>
+                )}
               </div>
 
               {/* ITEM 3: 미주법인 (코코모) */}
@@ -362,6 +373,12 @@ export default function InventorySummaryHud({
                     {kokomoTotal.toLocaleString()} EA
                   </span>
                 </div>
+                {arrivedTotal > 0 && includedCategories.kokomo && (
+                  <div className="text-[9px] text-amber-400/90 pl-6 flex justify-between pt-0.5 border-t border-amber-900/40 mt-1 font-mono">
+                    <span>기본: {((Number(kokomoInventory.baseTotal) || (kokomoTotal - arrivedTotal))).toLocaleString()} EA</span>
+                    <span className="text-emerald-400 font-bold">+철송입고: +{arrivedTotal.toLocaleString()} EA</span>
+                  </div>
+                )}
               </div>
 
               {/* ITEM 4: 고객 SPE */}

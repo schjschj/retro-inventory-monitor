@@ -50,6 +50,8 @@ export default function DataControlModal({
   setKokomoInventory,
   speInventory,
   setSpeInventory,
+  arrivedQty = 0,
+  arrivedCount = 0,
   lang = 'ko',
   isAdmin = false,
   authRole = null,
@@ -59,12 +61,12 @@ export default function DataControlModal({
   const [activeTab, setActiveTab] = useState('INCHEON');
   const [uploadMessage, setUploadMessage] = useState(null);
 
-  // Helper to always keep shipments strictly sorted by ETA descending (newest ETA first)
-  const sortShipmentsByEtaDesc = (list) => {
+  // Helper to always keep shipments strictly sorted by ETA ascending (earliest ETA first)
+  const sortShipmentsByEtaAsc = (list) => {
     return [...list].sort((a, b) => {
       const timeA = a.eta ? new Date(a.eta).getTime() : 0;
       const timeB = b.eta ? new Date(b.eta).getTime() : 0;
-      return timeB - timeA;
+      return timeA - timeB;
     });
   };
 
@@ -209,7 +211,7 @@ export default function DataControlModal({
     const updated = {
       ...speInventory,
       totalInventory: Number(speForm.totalInventory) || 0,
-      dailyConsumption: Number(speForm.dailyConsumption) || 1400
+      dailyConsumption: Number(speForm.dailyConsumption) || 20000
     };
     setSpeInventory(updated);
     sound.playSuccess();
@@ -263,7 +265,7 @@ export default function DataControlModal({
     const updatedSpe = {
       ...speInventory,
       totalInventory: Number(speForm.totalInventory) || 0,
-      dailyConsumption: Number(speForm.dailyConsumption) || 1400
+      dailyConsumption: Number(speForm.dailyConsumption) || 20000
     };
 
     // Update state and explicitly trigger persistent sync for all
@@ -343,7 +345,7 @@ export default function DataControlModal({
       items
     };
 
-    const nextShipments = sortShipmentsByEtaDesc([created, ...shipments]);
+    const nextShipments = sortShipmentsByEtaAsc([created, ...shipments]);
     setShipments(nextShipments);
     syncShipments(nextShipments);
     try {
@@ -391,7 +393,7 @@ export default function DataControlModal({
   const handleDeleteShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playClick();
-    const nextShipments = sortShipmentsByEtaDesc(shipments.filter(s => s.id !== id));
+    const nextShipments = sortShipmentsByEtaAsc(shipments.filter(s => s.id !== id));
     setShipments(nextShipments);
     await syncShipments(nextShipments);
     try {
@@ -464,7 +466,7 @@ export default function DataControlModal({
       }
       return s;
     });
-    const nextShipments = sortShipmentsByEtaDesc(mapped);
+    const nextShipments = sortShipmentsByEtaAsc(mapped);
     setShipments(nextShipments);
     await syncShipments(nextShipments);
     try {
@@ -497,7 +499,7 @@ export default function DataControlModal({
       }
       return s;
     });
-    const updated = sortShipmentsByEtaDesc(mapped);
+    const updated = sortShipmentsByEtaAsc(mapped);
     setShipments(updated);
     syncShipments(updated);
     try {
@@ -513,7 +515,7 @@ export default function DataControlModal({
       }
       return s;
     });
-    const updated = sortShipmentsByEtaDesc(mapped);
+    const updated = sortShipmentsByEtaAsc(mapped);
     setShipments(updated);
     syncShipments(updated);
     try {
@@ -608,7 +610,7 @@ export default function DataControlModal({
 
       // 1. Direct handling of pre-parsed production schedule shipments (from 요약 sheet)
       if (data && data.length > 0 && data[0]?.isPreParsed) {
-        const sortedData = sortShipmentsByEtaDesc(data);
+        const sortedData = sortShipmentsByEtaAsc(data);
         const railCount = sortedData.filter(s => s.inlandMode === 'RAIL').length;
         const truckCount = sortedData.filter(s => s.inlandMode === 'TRUCK').length;
         setShipments(sortedData);
@@ -680,7 +682,7 @@ export default function DataControlModal({
       });
 
       if (importedShipments.length > 0) {
-        const nextShipments = sortShipmentsByEtaDesc([...importedShipments, ...shipments]);
+        const nextShipments = sortShipmentsByEtaAsc([...importedShipments, ...shipments]);
         setShipments(nextShipments);
         syncShipments(nextShipments);
         try {
@@ -1107,6 +1109,7 @@ export default function DataControlModal({
                   <div className="text-slate-300 font-bold flex items-center gap-2">
                     <Ship className="w-4 h-4 text-cyan-400" />
                     <span>현재 운송중인 차수 목록 ({shipments.length}건)</span>
+                    <span className="text-[10px] text-cyan-400 font-mono font-normal">· ETA 오름차순 (도착 임박순)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1138,7 +1141,7 @@ export default function DataControlModal({
                 </div>
 
                 <div className="space-y-2">
-                  {sortShipmentsByEtaDesc(shipments).map(s => (
+                  {sortShipmentsByEtaAsc(shipments).map(s => (
                     editingShipmentId === s.id ? (
                       <div key={s.id} className="p-3.5 bg-[#0f1d33] border-2 border-amber-400 rounded-sm space-y-3 shadow-[0_0_15px_rgba(251,191,36,0.25)] animate-fadeIn">
                         <div className="flex items-center justify-between border-b border-amber-500/40 pb-2">
@@ -1566,6 +1569,12 @@ export default function DataControlModal({
                     <span>미주법인 재고 클라우드 저장</span>
                   </button>
                 </div>
+
+                {arrivedQty > 0 && (
+                  <div className="p-2 bg-emerald-950/80 border border-emerald-500/80 text-emerald-200 rounded text-[11px] flex items-center justify-between shadow">
+                    <span>🚚 <b>시뮬레이션 입고 연동 안내:</b> 현재 도착 완료된 차수({arrivedCount}건)로 인해 메인 지도 및 HUD의 코코모 재고에 <b>+{arrivedQty.toLocaleString()} EA</b>가 실시간 합산 표시됩니다.</span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div>

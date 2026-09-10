@@ -196,9 +196,9 @@ export default function RetroWorldMap({
 
         {/* ======================================================== */}
         {/* 5. NORTH AMERICA (CANADA & UNITED STATES FULL CONTINENT) */}
-        {/* Shifted UPWARDS by 60px to free up bottom-right space for HUD */}
+        {/* Shifted UPWARDS by 120px to provide ample space above HUD */}
         {/* ======================================================== */}
-        <g id="north-america-continent" transform="translate(0, -60)" fill="#101c30" stroke="#294875" strokeWidth="1.5">
+        <g id="north-america-continent" transform="translate(0, -120)" fill="#101c30" stroke="#294875" strokeWidth="1.5">
           {/* Alaska & North Pacific Coast */}
           <path d="
             M 890,165 
@@ -350,7 +350,7 @@ export default function RetroWorldMap({
         <text x="560" y="125" fill="#38bdf8" opacity="0.85" fontSize="11" fontFamily="monospace" fontWeight="bold">
           {t('routeAir', lang)}
         </text>
-        <text x="1115" y="325" fill="#10b981" opacity="0.95" fontSize="10.5" fontFamily="monospace" fontWeight="bold">
+        <text x="1115" y="265" fill="#10b981" opacity="0.95" fontSize="10.5" fontFamily="monospace" fontWeight="bold">
           {t('routeRail', lang)}
         </text>
       </svg>

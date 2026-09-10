@@ -309,6 +309,16 @@ export default function NodeOverlay({
                 </div>
               </div>
 
+              {kokomoInventory.arrivedQty > 0 && (
+                <div className="mb-2.5 p-1.5 bg-emerald-950/80 border border-emerald-500/70 rounded text-[9.5px] text-emerald-300 flex items-center justify-between shadow-sm">
+                  <span className="flex items-center gap-1 font-bold">
+                    <span>🚚</span>
+                    <span>철송/항공 입고완료:</span>
+                  </span>
+                  <span className="font-bold font-mono">+{Number(kokomoInventory.arrivedQty).toLocaleString()} EA ({kokomoInventory.arrivedCount}건)</span>
+                </div>
+              )}
+
               <div className="mb-3">
                 <div className="flex h-3 w-full border border-slate-700 overflow-hidden bg-slate-900 mb-1">
                   <div style={{ width: `${multiPct}%` }} className="bg-cyan-500" title={`Multi Assy: ${multiPct}%`}></div>
@@ -347,6 +357,18 @@ export default function NodeOverlay({
                   <span className="text-rose-300 font-bold">{Number(kokomoInventory.backShip).toLocaleString()} EA</span>
                 </div>
               </div>
+
+              {kokomoInventory.history && kokomoInventory.history.length > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-amber-900/40 text-[9.5px] space-y-1">
+                  <div className="text-[9px] text-slate-400 font-bold">최근 입고 및 인도 이력:</div>
+                  {kokomoInventory.history.slice(0, 3).map((h, idx) => (
+                    <div key={idx} className="flex justify-between text-slate-300">
+                      <span className="text-amber-400/80 font-mono shrink-0">[{h.time}]</span>
+                      <span className="truncate ml-1.5 flex-1 text-right">{h.event}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

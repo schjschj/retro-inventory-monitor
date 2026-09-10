@@ -118,6 +118,6 @@ export const INITIAL_SPE_INVENTORY = {
     { lot: 'SPE-LN2-8845', name: 'Cap Assy Buffer', qty: 11400, status: '버퍼 재고' },
     { lot: 'SPE-HOLD-102', name: 'Inspection Hold', qty: 3800, status: '품질 샘플링' }
   ],
-  dailyConsumption: 1400,
+  dailyConsumption: 20000,
   safetyStock: 15000
 };

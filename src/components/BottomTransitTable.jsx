@@ -29,11 +29,11 @@ export default function BottomTransitTable({
     return true;
   });
 
-  // Sort by departureDate descending (출항일 기준 내림차순: 최근 출항일 순서로 정렬)
+  // Sort by ETA ascending (ETA 기준 오름차순: 가장 먼저 도착하는 차수 우선)
   const sortedShipments = [...filteredShipments].sort((a, b) => {
-    const timeA = new Date(a.departureDate).getTime() || 0;
-    const timeB = new Date(b.departureDate).getTime() || 0;
-    return timeB - timeA;
+    const timeA = new Date(a.eta).getTime() || 0;
+    const timeB = new Date(b.eta).getTime() || 0;
+    return timeA - timeB;
   });
 
   return (
@@ -46,6 +46,9 @@ export default function BottomTransitTable({
             <span className="w-2.5 h-2.5 bg-cyan-400"></span>
             <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
               {t('tableTitle', lang)} ({sortedShipments.length})
+            </span>
+            <span className="text-[10px] text-slate-400">
+              · {lang === 'en' ? 'ETA Ascending' : 'ETA 오름차순'}
             </span>
           </div>
           <button

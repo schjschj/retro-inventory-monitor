@@ -48,7 +48,7 @@ export async function fetchAllInventoryData() {
 
     const speData = speRes.data ? {
       totalInventory: Number(speRes.data.total_inventory) || 0,
-      dailyConsumption: Number(speRes.data.daily_consumption) || 1400,
+      dailyConsumption: Number(speRes.data.daily_consumption) || 20000,
       clusterName: speRes.data.cluster_name || '미국 고객사 생산라인'
     } : parsedSpe;
 
@@ -164,7 +164,7 @@ export async function syncSpeInventory(data) {
     await supabase.from('inventory_spe').upsert({
       id: 'current',
       total_inventory: Number(data.totalInventory) || 0,
-      daily_consumption: Number(data.dailyConsumption) || 1400,
+      daily_consumption: Number(data.dailyConsumption) || 20000,
       cluster_name: data.clusterName || '미국 고객사 생산라인',
       updated_at: new Date().toISOString()
     });
@@ -263,7 +263,7 @@ export function subscribeToRealtimeUpdates({
       if (payload.new && onSpeChange) {
         onSpeChange({
           totalInventory: Number(payload.new.total_inventory) || 0,
-          dailyConsumption: Number(payload.new.daily_consumption) || 1400,
+          dailyConsumption: Number(payload.new.daily_consumption) || 20000,
           clusterName: payload.new.cluster_name || '미국 고객사 생산라인'
         });
       }

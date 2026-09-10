@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from './components/Header';
 import RetroWorldMap from './components/RetroWorldMap';
 import InventorySummaryHud from './components/InventorySummaryHud';
@@ -51,7 +51,13 @@ export default function App() {
   const [speInventory, setSpeInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('tactical_spe_inventory');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.dailyConsumption || Number(parsed.dailyConsumption) === 1400) {
+          parsed.dailyConsumption = 20000;
+        }
+        return parsed;
+      }
     } catch (e) {}
     return INITIAL_SPE_INVENTORY;
   });
@@ -183,7 +189,12 @@ export default function App() {
         if (isMounted) {
           if (data.incheon) setIncheonInventory(data.incheon);
           if (data.kokomo) setKokomoInventory(data.kokomo);
-          if (data.spe) setSpeInventory(data.spe);
+          if (data.spe) {
+            setSpeInventory({
+              ...data.spe,
+              dailyConsumption: (!data.spe.dailyConsumption || Number(data.spe.dailyConsumption) === 1400) ? 20000 : Number(data.spe.dailyConsumption)
+            });
+          }
           if (data.shipments) setShipments(data.shipments);
         }
       } catch (err) {
@@ -259,6 +270,63 @@ export default function App() {
     sound.playSuccess();
   };
 
+  // Dynamic Simulation Calculation: Arrived Shipments vs In-Transit Shipments
+  const arrivedShipments = useMemo(() => {
+    return (shipments || []).filter(s => (Number(s.progress) || 0) >= 100);
+  }, [shipments]);
+
+  const activeTransitShipments = useMemo(() => {
+    return (shipments || []).filter(s => (Number(s.progress) || 0) < 100);
+  }, [shipments]);
+
+  // Dynamic Kokomo Inventory: Base Kokomo stock + all arrived shipments transferred into facility
+  const effectiveKokomoInventory = useMemo(() => {
+    let addMulti = 0;
+    let addCap = 0;
+    let addBack = 0;
+
+    arrivedShipments.forEach(s => {
+      if (Array.isArray(s.items) && s.items.length > 0) {
+        s.items.forEach(it => {
+          const name = (it.name || '').toLowerCase();
+          const q = Number(it.qty) || 0;
+          if (name.includes('multi')) addMulti += q;
+          else if (name.includes('cap')) addCap += q;
+          else if (name.includes('back')) addBack += q;
+          else addMulti += q;
+        });
+      } else {
+        const totalQ = Number(s.quantity) || 0;
+        addMulti += Math.round(totalQ * 0.55);
+        addCap += Math.round(totalQ * 0.40);
+        addBack += totalQ - Math.round(totalQ * 0.55) - Math.round(totalQ * 0.40);
+      }
+    });
+
+    const recentArrivalEvents = arrivedShipments.map(s => ({
+      time: s.eta ? s.eta.slice(5) : '입고',
+      event: `${s.batchNo || '차수'} 코코모 입고 완료 (+${(Number(s.quantity) || 0).toLocaleString()} EA)`
+    })).reverse().slice(0, 5);
+
+    const baseMulti = Number(kokomoInventory.multiAssy) || 0;
+    const baseCap = Number(kokomoInventory.capAssy) || 0;
+    const baseBack = Number(kokomoInventory.backShip) || 0;
+
+    return {
+      ...kokomoInventory,
+      multiAssy: baseMulti + addMulti,
+      capAssy: baseCap + addCap,
+      backShip: baseBack + addBack,
+      baseTotal: baseMulti + baseCap + baseBack,
+      arrivedQty: addMulti + addCap + addBack,
+      arrivedCount: arrivedShipments.length,
+      history: [
+        ...recentArrivalEvents,
+        ...(kokomoInventory.history || [])
+      ].slice(0, 10)
+    };
+  }, [kokomoInventory, arrivedShipments]);
+
   const delayedShipments = shipments.filter(s => s.isDelayed);
 
   const getFontScaleClass = () => {
@@ -311,7 +379,7 @@ export default function App() {
           <RetroWorldMap
             shipments={shipments}
             incheonInventory={incheonInventory}
-            kokomoInventory={kokomoInventory}
+            kokomoInventory={effectiveKokomoInventory}
             speInventory={speInventory}
             customSpeCoords={customSpeCoords}
             onSelectShipment={(s) => {
@@ -329,7 +397,7 @@ export default function App() {
           <InventorySummaryHud
             incheonInventory={incheonInventory}
             shipments={shipments}
-            kokomoInventory={kokomoInventory}
+            kokomoInventory={effectiveKokomoInventory}
             speInventory={speInventory}
             isVisible={isHudVisible}
             onToggleVisibility={() => setIsHudVisible(!isHudVisible)}
@@ -376,6 +444,8 @@ export default function App() {
         setKokomoInventory={handleUpdateKokomoInventory}
         speInventory={speInventory}
         setSpeInventory={handleUpdateSpeInventory}
+        arrivedQty={effectiveKokomoInventory.arrivedQty}
+        arrivedCount={effectiveKokomoInventory.arrivedCount}
         lang={lang}
         isAdmin={isAdmin}
         authRole={authRole}
