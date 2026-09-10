@@ -37,7 +37,7 @@ export default function App() {
   const [shipments, setShipments] = useState(() => {
     try {
       const saved = localStorage.getItem('tactical_shipments');
-      if (saved) return JSON.parse(saved);
+      if (saved !== null) return JSON.parse(saved);
     } catch (e) {}
     return INITIAL_SHIPMENTS;
   });

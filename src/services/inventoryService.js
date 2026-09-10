@@ -13,10 +13,10 @@ export async function fetchAllInventoryData() {
   const savedSpe = localStorage.getItem('tactical_spe_inventory');
   const savedShipments = localStorage.getItem('tactical_shipments');
 
-  const parsedIncheon = savedIncheon ? JSON.parse(savedIncheon) : INITIAL_INCHEON_INVENTORY;
-  const parsedKokomo = savedKokomo ? JSON.parse(savedKokomo) : INITIAL_KOKOMO_INVENTORY;
-  const parsedSpe = savedSpe ? JSON.parse(savedSpe) : INITIAL_SPE_INVENTORY;
-  const parsedShipments = savedShipments ? JSON.parse(savedShipments) : INITIAL_SHIPMENTS;
+  const parsedIncheon = savedIncheon !== null ? JSON.parse(savedIncheon) : INITIAL_INCHEON_INVENTORY;
+  const parsedKokomo = savedKokomo !== null ? JSON.parse(savedKokomo) : INITIAL_KOKOMO_INVENTORY;
+  const parsedSpe = savedSpe !== null ? JSON.parse(savedSpe) : INITIAL_SPE_INVENTORY;
+  const parsedShipments = savedShipments !== null ? JSON.parse(savedShipments) : INITIAL_SHIPMENTS;
 
   if (!isSupabaseConfigured() || !supabase) {
     return {
@@ -52,29 +52,35 @@ export async function fetchAllInventoryData() {
       clusterName: speRes.data.cluster_name || '미국 고객사 생산라인'
     } : parsedSpe;
 
-    const shipmentsData = (shipmentsRes.data && shipmentsRes.data.length > 0)
-      ? shipmentsRes.data.map(row => ({
-          id: row.id,
-          batchNo: row.batch_no,
-          type: row.type,
-          containerNo: row.container_no,
-          vesselName: row.vessel_name,
-          departureDate: row.departure_date,
-          eta: row.eta,
-          quantity: Number(row.quantity) || 0,
-          items: row.items || [],
-          status: row.status,
-          progress: Number(row.progress) || 0,
-          isDelayed: Boolean(row.is_delayed),
-          delayReason: row.delay_reason,
-          origin: row.origin,
-          portOfEntry: row.port_of_entry,
-          destination: row.destination,
-          inlandMode: row.overland_mode === 'TRUCK' ? 'TRUCK' : 'RAIL',
-          shippingMethod: row.overland_mode === 'TRUCK' ? '싱글' : '철송',
-          overlandMode: row.overland_mode || 'RAIL'
-        }))
-      : parsedShipments;
+    let shipmentsData;
+    if (shipmentsRes.data && shipmentsRes.data.length > 0) {
+      shipmentsData = shipmentsRes.data.map(row => ({
+        id: row.id,
+        batchNo: row.batch_no,
+        type: row.type,
+        containerNo: row.container_no,
+        vesselName: row.vessel_name,
+        departureDate: row.departure_date,
+        eta: row.eta,
+        quantity: Number(row.quantity) || 0,
+        items: row.items || [],
+        status: row.status,
+        progress: Number(row.progress) || 0,
+        isDelayed: Boolean(row.is_delayed),
+        delayReason: row.delay_reason,
+        origin: row.origin,
+        portOfEntry: row.port_of_entry,
+        destination: row.destination,
+        inlandMode: row.overland_mode === 'TRUCK' ? 'TRUCK' : 'RAIL',
+        shippingMethod: row.overland_mode === 'TRUCK' ? '싱글' : '철송',
+        overlandMode: row.overland_mode || 'RAIL'
+      }));
+    } else if (shipmentsRes.data && shipmentsRes.data.length === 0) {
+      // Table is empty in Supabase (all shipments were deleted)
+      shipmentsData = [];
+    } else {
+      shipmentsData = parsedShipments;
+    }
 
     // Cache latest fetched data to LocalStorage for fast offline startup
     try {
@@ -169,15 +175,22 @@ export async function syncSpeInventory(data) {
   }
 }
 
-// Update Shipments (replace or upsert)
+// Update Shipments (replace, upsert, or clear)
 export async function syncShipments(shipments) {
   try {
-    localStorage.setItem('tactical_shipments', JSON.stringify(shipments));
+    localStorage.setItem('tactical_shipments', JSON.stringify(shipments || []));
   } catch (e) {}
 
   if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
+    // If shipments is empty, clear all records from Supabase shipments table
+    if (!shipments || shipments.length === 0) {
+      const { error: delAllErr } = await supabase.from('shipments').delete().neq('id', '___NON_EXISTENT_DUMMY___');
+      if (delAllErr) console.error('Supabase clear all shipments error:', delAllErr);
+      return { success: !delAllErr };
+    }
+
     const rows = shipments.map((s, idx) => ({
       id: String(s.id || `SHIP-${s.batchNo || idx}-${idx}`),
       batch_no: String(s.batchNo || `차수 #${idx + 1}`),
@@ -199,9 +212,19 @@ export async function syncShipments(shipments) {
       updated_at: new Date().toISOString()
     }));
 
-    if (rows.length > 0) {
-      await supabase.from('shipments').upsert(rows);
+    // 1. Upsert current rows
+    await supabase.from('shipments').upsert(rows);
+
+    // 2. Delete any shipments from Supabase that are no longer in the shipments list
+    const currentIds = rows.map(r => r.id);
+    const { data: existingRows } = await supabase.from('shipments').select('id');
+    if (existingRows && existingRows.length > 0) {
+      const idsToDelete = existingRows.map(r => r.id).filter(id => !currentIds.includes(id));
+      if (idsToDelete.length > 0) {
+        await supabase.from('shipments').delete().in('id', idsToDelete);
+      }
     }
+
     return { success: true };
   } catch (err) {
     console.error('Supabase Shipments sync error:', err);

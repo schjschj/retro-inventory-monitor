@@ -20,7 +20,8 @@ import {
   Save,
   PackageCheck,
   Undo2,
-  RotateCcw
+  RotateCcw,
+  Edit2
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { 
@@ -110,6 +111,23 @@ export default function DataControlModal({
     origin: '인천신항 (KR)',
     portOfEntry: 'LA 롱비치 항만 (US)',
     destination: '코코모 미주법인 (US)'
+  });
+
+  // State for inline editing of existing shipments
+  const [editingShipmentId, setEditingShipmentId] = useState(null);
+  const [editShipmentForm, setEditShipmentForm] = useState({
+    batchNo: '',
+    type: 'SEA',
+    vesselName: '',
+    containerNo: '',
+    quantity: 0,
+    departureDate: '',
+    eta: '',
+    progress: 0,
+    overlandMode: 'RAIL',
+    origin: '',
+    portOfEntry: '',
+    destination: ''
   });
 
   const [newLot, setNewLot] = useState({
@@ -361,18 +379,19 @@ export default function DataControlModal({
     });
   };
 
-  const handleDeleteShipment = (id) => {
+  const handleDeleteShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playClick();
     const nextShipments = shipments.filter(s => s.id !== id);
     setShipments(nextShipments);
-    syncShipments(nextShipments);
+    await syncShipments(nextShipments);
     try {
       localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
     } catch (e) {}
+    if (editingShipmentId === id) setEditingShipmentId(null);
   };
 
-  const handleDeleteAllShipments = () => {
+  const handleDeleteAllShipments = async () => {
     if (!checkPermission('SHIPMENTS')) return;
     if (shipments.length === 0) return;
     if (!confirm(lang === 'ko' ? `정말 등록된 ${shipments.length}개의 운송 차수를 모두 삭제하시겠습니까? (삭제 후 영구 반영됩니다)` : `Delete all ${shipments.length} shipments?`)) {
@@ -380,14 +399,77 @@ export default function DataControlModal({
     }
     sound.playClick();
     setShipments([]);
-    syncShipments([]);
+    await syncShipments([]);
     try {
       localStorage.setItem('tactical_shipments', JSON.stringify([]));
     } catch(e) {}
+    setEditingShipmentId(null);
     setUploadMessage({
       type: 'success',
       text: lang === 'ko' ? '✅ 모든 해상/항공 운송 차수가 성공적으로 일괄 삭제되었습니다.' : 'All shipments deleted successfully.'
     });
+  };
+
+  const handleStartEditShipment = (s) => {
+    if (!checkPermission('SHIPMENTS')) return;
+    sound.playClick();
+    setEditingShipmentId(s.id);
+    setEditShipmentForm({
+      batchNo: s.batchNo || '',
+      type: s.type || 'SEA',
+      vesselName: s.vesselName || '',
+      containerNo: s.containerNo || '',
+      quantity: s.quantity || 0,
+      departureDate: s.departureDate ? s.departureDate.slice(0, 16) : '',
+      eta: s.eta ? s.eta.slice(0, 16) : '',
+      progress: s.progress || 0,
+      overlandMode: s.overlandMode || (s.inlandMode === 'TRUCK' ? 'TRUCK' : 'RAIL'),
+      origin: s.origin || (s.type === 'AIR' ? '인천국제공항 (KR)' : '인천신항 (KR)'),
+      portOfEntry: s.portOfEntry || (s.type === 'AIR' ? '시카고 오헤어 (ORD)' : 'LA 롱비치 항만 (US)'),
+      destination: s.destination || '코코모 미주법인 (US)'
+    });
+  };
+
+  const handleSaveEditShipment = async (id) => {
+    if (!checkPermission('SHIPMENTS')) return;
+    sound.playSuccess();
+    const nextShipments = shipments.map(s => {
+      if (s.id === id) {
+        return {
+          ...s,
+          batchNo: editShipmentForm.batchNo || s.batchNo,
+          type: editShipmentForm.type,
+          vesselName: editShipmentForm.vesselName,
+          containerNo: editShipmentForm.containerNo,
+          quantity: Math.max(1, Number(editShipmentForm.quantity) || 1),
+          departureDate: editShipmentForm.departureDate || s.departureDate,
+          eta: editShipmentForm.eta || s.eta,
+          progress: Math.min(100, Math.max(0, Number(editShipmentForm.progress) || 0)),
+          overlandMode: editShipmentForm.overlandMode,
+          inlandMode: editShipmentForm.overlandMode === 'TRUCK' ? 'TRUCK' : 'RAIL',
+          shippingMethod: editShipmentForm.overlandMode === 'TRUCK' ? '싱글' : '철송',
+          origin: editShipmentForm.origin || s.origin,
+          portOfEntry: editShipmentForm.portOfEntry || s.portOfEntry,
+          destination: editShipmentForm.destination || s.destination
+        };
+      }
+      return s;
+    });
+    setShipments(nextShipments);
+    await syncShipments(nextShipments);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
+    } catch (e) {}
+    setEditingShipmentId(null);
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' ? `[수정 완료] ${editShipmentForm.batchNo} 운송 차수 정보가 성공적으로 수정되었습니다.` : `Shipment ${editShipmentForm.batchNo} updated successfully.`
+    });
+  };
+
+  const handleCancelEditShipment = () => {
+    sound.playClick();
+    setEditingShipmentId(null);
   };
 
   const handleToggleDelay = (id) => {
@@ -596,8 +678,8 @@ export default function DataControlModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-mono animate-fadeIn">
-      <div className="pixel-box bg-[#0c1322] border-2 border-cyan-400 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.4)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm font-mono animate-fadeIn">
+      <div className="pixel-box bg-[#0c1322] border-2 border-cyan-400 w-full max-w-5xl xl:max-w-[1100px] max-h-[92vh] flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.4)]">
         
         <div className="bg-[#131f35] px-4 py-3 border-b border-cyan-500/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1025,75 +1107,207 @@ export default function DataControlModal({
 
                 <div className="space-y-2">
                   {shipments.map(s => (
-                    <div key={s.id} className="p-3 bg-[#0d1624] border border-slate-700 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-[#17253b] border border-slate-600">
-                          {s.type === 'SEA' ? <Ship className="w-5 h-5 text-cyan-400" /> : s.type === 'AIR' ? <Plane className="w-5 h-5 text-sky-400" /> : <Truck className="w-5 h-5 text-amber-400" />}
+                    editingShipmentId === s.id ? (
+                      <div key={s.id} className="p-3.5 bg-[#0f1d33] border-2 border-amber-400 rounded-sm space-y-3 shadow-[0_0_15px_rgba(251,191,36,0.25)] animate-fadeIn">
+                        <div className="flex items-center justify-between border-b border-amber-500/40 pb-2">
+                          <div className="flex items-center gap-2 font-bold text-amber-300 text-xs">
+                            <Edit2 className="w-4 h-4 text-amber-400" />
+                            <span>[{s.batchNo}] 운송 차수 정보 수정</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">ID: {s.id}</span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-sm">{s.batchNo}</span>
-                            <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 border border-slate-600 text-slate-300">
-                              {s.vesselName} ({s.containerNo})
-                            </span>
-                            {s.isDelayed && (
-                              <span className="text-[10px] px-1.5 py-0.2 bg-rose-950 border border-rose-500 text-rose-400 font-bold animate-pulse">
-                                ETA 지연중
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">차수명</label>
+                            <input
+                              type="text"
+                              value={editShipmentForm.batchNo}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, batchNo: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">운송 모드</label>
+                            <select
+                              value={editShipmentForm.type}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, type: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            >
+                              <option value="SEA">해상 컨테이너선 (SEA)</option>
+                              <option value="AIR">항공 화물기 (AIR)</option>
+                              <option value="TRUCK">내륙 직송 트럭 (TRUCK)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">선박/편명</label>
+                            <input
+                              type="text"
+                              value={editShipmentForm.vesselName}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, vesselName: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">적재 수량 (EA)</label>
+                            <input
+                              type="number"
+                              value={editShipmentForm.quantity}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, quantity: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                              min="1"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">컨테이너/화물 번호</label>
+                            <input
+                              type="text"
+                              value={editShipmentForm.containerNo}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, containerNo: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">출항일시</label>
+                            <input
+                              type="datetime-local"
+                              value={editShipmentForm.departureDate}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, departureDate: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-[11px] focus:border-amber-400 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">도착예상일 (ETA)</label>
+                            <input
+                              type="datetime-local"
+                              value={editShipmentForm.eta}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, eta: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-[11px] focus:border-amber-400 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">위치 진행률 ({editShipmentForm.progress}%)</label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={editShipmentForm.progress}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, progress: Number(e.target.value) })}
+                              className="w-full accent-amber-400 mt-2 cursor-pointer"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-700/80">
+                          <button
+                            type="button"
+                            onClick={handleCancelEditShipment}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded border border-slate-600 transition-colors"
+                          >
+                            {lang === 'en' ? 'Cancel' : '취소'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEditShipment(s.id)}
+                            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded border border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)] transition-all flex items-center gap-1.5"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>{lang === 'en' ? 'Save Changes' : '변경사항 저장'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={s.id} className="p-3 bg-[#0d1624] border border-slate-700 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-[#17253b] border border-slate-600">
+                            {s.type === 'SEA' ? <Ship className="w-5 h-5 text-cyan-400" /> : s.type === 'AIR' ? <Plane className="w-5 h-5 text-sky-400" /> : <Truck className="w-5 h-5 text-amber-400" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-sm">{s.batchNo}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 border border-slate-600 text-slate-300">
+                                {s.vesselName} ({s.containerNo})
                               </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            적재량: <span className="text-amber-300 font-bold">{s.quantity.toLocaleString()} EA</span> | ETA: {s.eta.slice(0, 16).replace('T', ' ')}
+                              {s.isDelayed && (
+                                <span className="text-[10px] px-1.5 py-0.2 bg-rose-950 border border-rose-500 text-rose-400 font-bold animate-pulse">
+                                  ETA 지연중
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              적재량: <span className="text-amber-300 font-bold">{s.quantity.toLocaleString()} EA</span> | ETA: {s.eta.slice(0, 16).replace('T', ' ')}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-36">
-                          <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                            <span>위치 진행률</span>
-                            <span className="text-cyan-400 font-bold">{Math.round(s.progress)}%</span>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-32 sm:w-36">
+                            <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                              <span>위치 진행률</span>
+                              <span className="text-cyan-400 font-bold">{Math.round(s.progress)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={s.progress}
+                              onChange={(e) => handleProgressChange(s.id, e.target.value)}
+                              disabled={!canEditShipments}
+                              className={`w-full accent-cyan-400 ${!canEditShipments ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
+                            />
                           </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={s.progress}
-                            onChange={(e) => handleProgressChange(s.id, e.target.value)}
+
+                          <button
                             disabled={!canEditShipments}
-                            className={`w-full accent-cyan-400 ${!canEditShipments ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
-                          />
+                            onClick={() => handleStartEditShipment(s)}
+                            className={`px-2.5 py-1 border text-[11px] font-bold rounded flex items-center gap-1 transition-all whitespace-nowrap shadow-sm ${
+                              !canEditShipments
+                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                                : 'bg-[#15283f] hover:bg-[#1f3b5c] border-cyan-500/80 text-cyan-200 hover:text-white'
+                            }`}
+                            title={lang === 'en' ? 'Edit shipment details' : '차수 정보 상세 수정'}
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-cyan-300" />
+                            <span>{lang === 'en' ? 'Edit' : '수정'}</span>
+                          </button>
+
+                          <button
+                            disabled={!canEditShipments}
+                            onClick={() => handleToggleDelay(s.id)}
+                            className={`px-2 py-1 border text-[11px] font-bold rounded whitespace-nowrap transition-all ${
+                              !canEditShipments
+                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                                : s.isDelayed 
+                                ? 'bg-rose-950 border-rose-500 text-rose-300' 
+                                : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            {s.isDelayed ? '지연 해제' : '지연 처리'}
+                          </button>
+
+                          <button
+                            disabled={!canEditShipments}
+                            onClick={() => handleDeleteShipment(s.id)}
+                            className={`p-1.5 border rounded transition-all shrink-0 ${
+                              !canEditShipments
+                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                                : 'bg-[#261517] hover:bg-rose-900 border-rose-700 text-rose-300'
+                            }`}
+                            title="차수 삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
 
-                        <button
-                          disabled={!canEditShipments}
-                          onClick={() => handleToggleDelay(s.id)}
-                          className={`px-2 py-1 border text-[11px] font-bold transition-all ${
-                            !canEditShipments
-                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
-                              : s.isDelayed 
-                              ? 'bg-rose-950 border-rose-500 text-rose-300' 
-                              : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          {s.isDelayed ? '지연 해제' : '지연 처리'}
-                        </button>
-
-                        <button
-                          disabled={!canEditShipments}
-                          onClick={() => handleDeleteShipment(s.id)}
-                          className={`p-1.5 border rounded transition-all ${
-                            !canEditShipments
-                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
-                              : 'bg-[#261517] hover:bg-rose-900 border-rose-700 text-rose-300'
-                          }`}
-                          title="차수 삭제"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
-
-                    </div>
+                    )
                   ))}
                 </div>
               </div>
@@ -1209,15 +1423,17 @@ export default function DataControlModal({
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {incheonInventory.waitingInspection.map(lot => (
-                      <div key={lot.id} className="p-2 bg-[#201d14] border border-amber-700/60 flex items-center justify-between">
-                        <div>
-                          <div className="text-white font-bold">{lot.id}</div>
-                          <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
+                      <div key={lot.id} className="p-2 bg-[#201d14] border border-amber-700/60 rounded flex items-center justify-between gap-2 overflow-hidden">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <div className="text-white font-bold text-xs truncate">{lot.id}</div>
+                          <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
+                            {lot.name} | <span className="text-amber-300 font-semibold">{lot.quantity.toLocaleString()} EA</span>
+                          </div>
                         </div>
                         <button
                           disabled={!canEditIncheon}
                           onClick={() => handleApproveLot(lot.id)}
-                          className={`px-2 py-1 font-bold text-[10px] border transition-all ${
+                          className={`px-2.5 py-1 font-bold text-[10px] sm:text-[10.5px] border rounded transition-all whitespace-nowrap shrink-0 ${
                             !canEditIncheon
                               ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
                               : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-400 shadow'
@@ -1241,28 +1457,30 @@ export default function DataControlModal({
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {incheonInventory.passedInspection.map(lot => (
-                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-white font-bold">{lot.id}</div>
-                          <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
+                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 rounded flex items-center justify-between gap-2 overflow-hidden">
+                        <div className="min-w-0 flex-1 pr-1">
+                          <div className="text-white font-bold text-xs truncate">{lot.id}</div>
+                          <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
+                            {lot.name} | <span className="text-emerald-300 font-semibold">{lot.quantity.toLocaleString()} EA</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-emerald-400 font-bold text-[10px] border border-emerald-600 px-1.5 py-0.5">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-emerald-300 font-bold text-[9px] sm:text-[10px] border border-emerald-600 bg-emerald-950/70 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
                             수출 선적대기
                           </span>
                           <button
                             type="button"
                             disabled={!canEditIncheon}
                             onClick={() => handleReturnLotToWaiting(lot.id)}
-                            className={`px-2 py-0.5 text-[10.5px] font-bold rounded border flex items-center gap-1 transition-colors ${
+                            className={`px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                               !canEditIncheon
                                 ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-40'
                                 : 'bg-[#182638] hover:bg-[#223650] text-amber-300 border-amber-500/60 hover:border-amber-400'
                             }`}
                             title={lang === 'en' ? 'Return to pending inspection' : '검사대기 목록으로 되돌리기'}
                           >
-                            <RotateCcw className="w-3 h-3 text-amber-400" />
-                            <span>{lang === 'en' ? 'Return' : '검사대기로 환원'}</span>
+                            <RotateCcw className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="whitespace-nowrap">{lang === 'en' ? 'Return' : '검사대기로 환원'}</span>
                           </button>
                         </div>
                       </div>
