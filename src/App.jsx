@@ -154,14 +154,16 @@ export default function App() {
         }
 
         const isLate = currentMs > etaMs && prog < 100;
-        if (isLate && !s.isDelayed) {
+        if (isLate && !s.isDelayed && s.manualDelayed === undefined) {
           newlyDelayed = true;
         }
+
+        const finalDelayed = s.manualDelayed !== undefined ? s.manualDelayed : isLate;
 
         return {
           ...s,
           progress: Math.round(Math.min(100, Math.max(0, prog)) * 10) / 10,
-          isDelayed: isLate || (currentMs > etaMs && s.isDelayed)
+          isDelayed: finalDelayed
         };
       })
     );

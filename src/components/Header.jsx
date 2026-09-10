@@ -125,18 +125,32 @@ export default function Header({
               title={t('dateDirectSelect', lang)}
             />
             <button
+              onClick={() => handleTimeStep(-240)}
+              className="px-1.5 py-0.5 bg-[#17253b] hover:bg-cyan-900 border border-slate-600 hover:border-cyan-400 text-slate-200 text-[11px] font-bold text-center rounded transition-colors whitespace-nowrap"
+              title="-240h (-10d)"
+            >
+              {t('stepMinus10d', lang)}
+            </button>
+            <button
               onClick={() => handleTimeStep(-24)}
               className="px-1.5 py-0.5 bg-[#17253b] hover:bg-cyan-900 border border-slate-600 hover:border-cyan-400 text-slate-200 text-[11px] font-bold text-center rounded transition-colors whitespace-nowrap"
-              title="-24h"
+              title="-24h (-1d)"
             >
               {t('stepMinus1d', lang)}
             </button>
             <button
               onClick={() => handleTimeStep(24)}
               className="px-1.5 py-0.5 bg-[#17253b] hover:bg-cyan-900 border border-slate-600 hover:border-cyan-400 text-slate-200 text-[11px] font-bold text-center rounded transition-colors whitespace-nowrap"
-              title="+24h"
+              title="+24h (+1d)"
             >
               {t('stepPlus1d', lang)}
+            </button>
+            <button
+              onClick={() => handleTimeStep(240)}
+              className="px-1.5 py-0.5 bg-[#17253b] hover:bg-cyan-900 border border-slate-600 hover:border-cyan-400 text-slate-200 text-[11px] font-bold text-center rounded transition-colors whitespace-nowrap"
+              title="+240h (+10d)"
+            >
+              {t('stepPlus10d', lang)}
             </button>
           </div>
 

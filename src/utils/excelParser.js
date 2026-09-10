@@ -182,13 +182,15 @@ export function downloadSampleTemplate() {
  */
 function parseExcelDateValue(val, fallbackBaseDate = null, fallbackDays = 45) {
   if (val instanceof Date && !isNaN(val.getTime())) {
-    return val.toISOString().slice(0, 16);
+    if (val.getFullYear() >= 2020 && val.getFullYear() <= 2035) {
+      return val.toISOString().slice(0, 16);
+    }
   }
 
   if (typeof val === 'number' && val > 1000) {
     try {
       const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-      if (!isNaN(d.getTime())) {
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
         return d.toISOString().slice(0, 16);
       }
     } catch (e) {
@@ -198,16 +200,15 @@ function parseExcelDateValue(val, fallbackBaseDate = null, fallbackDays = 45) {
 
   if (typeof val === 'string' && val.trim().length > 0) {
     const trimmed = val.trim();
-    // Check if numeric string
     const num = Number(trimmed);
     if (!isNaN(num) && num > 1000) {
       const d = new Date(Math.round((num - 25569) * 86400 * 1000));
-      if (!isNaN(d.getTime())) {
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020 && d.getFullYear() <= 2035) {
         return d.toISOString().slice(0, 16);
       }
     }
     const parsed = new Date(trimmed);
-    if (!isNaN(parsed.getTime())) {
+    if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 2020 && parsed.getFullYear() <= 2035) {
       return parsed.toISOString().slice(0, 16);
     }
   }

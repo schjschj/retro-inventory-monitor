@@ -29,6 +29,13 @@ export default function BottomTransitTable({
     return true;
   });
 
+  // Sort by departureDate descending (출항일 기준 내림차순: 최근 출항일 순서로 정렬)
+  const sortedShipments = [...filteredShipments].sort((a, b) => {
+    const timeA = new Date(a.departureDate).getTime() || 0;
+    const timeB = new Date(b.departureDate).getTime() || 0;
+    return timeB - timeA;
+  });
+
   return (
     <div className="w-full bg-[#090e1a] border-t-2 border-[#1c2d42] p-3 font-mono">
       <div className="max-w-[1920px] mx-auto">
@@ -38,7 +45,7 @@ export default function BottomTransitTable({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-cyan-400"></span>
             <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
-              {t('tableTitle', lang)} ({filteredShipments.length})
+              {t('tableTitle', lang)} ({sortedShipments.length})
             </span>
           </div>
           <button
@@ -69,7 +76,7 @@ export default function BottomTransitTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-200">
-              {filteredShipments.map((s) => (
+              {sortedShipments.map((s) => (
                 <tr 
                   key={s.id} 
                   onClick={() => onSelectShipment(s)}

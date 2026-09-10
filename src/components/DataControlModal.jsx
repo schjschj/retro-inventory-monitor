@@ -17,7 +17,10 @@ import {
   Lock,
   Unlock,
   Key,
-  Save
+  Save,
+  PackageCheck,
+  Undo2,
+  RotateCcw
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { 
@@ -89,6 +92,10 @@ export default function DataControlModal({
       dailyConsumption: speInventory.dailyConsumption
     });
   }, [speInventory.totalInventory, speInventory.dailyConsumption]);
+
+  // States for importing/bundling passed inspection lots into a new shipment
+  const [selectedLotIds, setSelectedLotIds] = useState([]);
+  const [deductPassedLotsOnDispatch, setDeductPassedLotsOnDispatch] = useState(true);
 
   const [newShipment, setNewShipment] = useState({
     batchNo: '',
@@ -260,6 +267,31 @@ export default function DataControlModal({
     });
   };
 
+  const handleToggleSelectLot = (lot) => {
+    if (selectedLotIds.includes(lot.id)) {
+      const nextIds = selectedLotIds.filter(id => id !== lot.id);
+      setSelectedLotIds(nextIds);
+      const remainingLots = incheonInventory.passedInspection.filter(l => nextIds.includes(l.id));
+      const totalQ = remainingLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
+      setNewShipment(prev => ({
+        ...prev,
+        quantity: totalQ > 0 ? totalQ : 5000
+      }));
+    } else {
+      const nextIds = [...selectedLotIds, lot.id];
+      setSelectedLotIds(nextIds);
+      const chosenLots = incheonInventory.passedInspection.filter(l => nextIds.includes(l.id));
+      const totalQ = chosenLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
+      setNewShipment(prev => ({
+        ...prev,
+        quantity: totalQ,
+        batchNo: prev.batchNo || `해상 26-${Date.now().toString().slice(-2)}차`,
+        vesselName: prev.vesselName || 'HMM PACIFIC GLORY'
+      }));
+    }
+    sound.playClick();
+  };
+
   const handleAddShipment = (e) => {
     e.preventDefault();
     if (!checkPermission('SHIPMENTS')) return;
@@ -268,18 +300,44 @@ export default function DataControlModal({
       return;
     }
 
+    const chosenLots = incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id));
+    const items = chosenLots.length > 0
+      ? chosenLots.map(l => ({ name: l.name, qty: Number(l.quantity) || 0 }))
+      : [
+          { name: 'Multi Assy', qty: Math.round(Number(newShipment.quantity) * 0.6) },
+          { name: 'Cap Assy', qty: Math.round(Number(newShipment.quantity) * 0.4) }
+        ];
+
     const created = {
       ...newShipment,
       id: `SHIP-${newShipment.type}-${Date.now().toString().slice(-4)}`,
       quantity: Number(newShipment.quantity),
       progress: Number(newShipment.progress),
-      items: [
-        { name: 'Multi Assy', qty: Math.round(newShipment.quantity * 0.6) },
-        { name: 'Cap Assy', qty: Math.round(newShipment.quantity * 0.4) }
-      ]
+      items
     };
 
-    setShipments([created, ...shipments]);
+    const nextShipments = [created, ...shipments];
+    setShipments(nextShipments);
+    syncShipments(nextShipments);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
+    } catch (e) {}
+
+    // Deduct passed lots if option enabled
+    if (deductPassedLotsOnDispatch && chosenLots.length > 0) {
+      const remainingPassed = incheonInventory.passedInspection.filter(l => !selectedLotIds.includes(l.id));
+      const updatedIncheon = {
+        ...incheonInventory,
+        passedInspection: remainingPassed
+      };
+      setIncheonInventory(updatedIncheon);
+      syncIncheonInventory(updatedIncheon);
+      try {
+        localStorage.setItem('tactical_incheon_inventory', JSON.stringify(updatedIncheon));
+      } catch (e) {}
+    }
+
+    setSelectedLotIds([]);
     sound.playSuccess();
     setNewShipment({
       batchNo: '',
@@ -295,37 +353,78 @@ export default function DataControlModal({
       portOfEntry: 'LA 롱비치 항만 (US)',
       destination: '코코모 미주법인 (US)'
     });
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko'
+        ? `신규 운송 차수(${created.batchNo})가 등록되었습니다! ${chosenLots.length > 0 ? `(선택된 ${chosenLots.length}개 인천 출하합격 로트 선적 완료)` : ''}`
+        : `New shipment batch (${created.batchNo}) registered successfully!`
+    });
   };
 
   const handleDeleteShipment = (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playClick();
-    setShipments(shipments.filter(s => s.id !== id));
+    const nextShipments = shipments.filter(s => s.id !== id);
+    setShipments(nextShipments);
+    syncShipments(nextShipments);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify(nextShipments));
+    } catch (e) {}
+  };
+
+  const handleDeleteAllShipments = () => {
+    if (!checkPermission('SHIPMENTS')) return;
+    if (shipments.length === 0) return;
+    if (!confirm(lang === 'ko' ? `정말 등록된 ${shipments.length}개의 운송 차수를 모두 삭제하시겠습니까? (삭제 후 영구 반영됩니다)` : `Delete all ${shipments.length} shipments?`)) {
+      return;
+    }
+    sound.playClick();
+    setShipments([]);
+    syncShipments([]);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify([]));
+    } catch(e) {}
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' ? '✅ 모든 해상/항공 운송 차수가 성공적으로 일괄 삭제되었습니다.' : 'All shipments deleted successfully.'
+    });
   };
 
   const handleToggleDelay = (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playToggle();
-    setShipments(shipments.map(s => {
+    const updated = shipments.map(s => {
       if (s.id === id) {
+        const nextDelayed = !s.isDelayed;
         return {
           ...s,
-          isDelayed: !s.isDelayed,
-          delayReason: !s.isDelayed ? '통관 및 환적 대기 지연' : null
+          isDelayed: nextDelayed,
+          manualDelayed: nextDelayed, // Explicit user toggle
+          delayReason: nextDelayed ? (s.delayReason || '통관 및 환적 대기 지연') : ''
         };
       }
       return s;
-    }));
+    });
+    setShipments(updated);
+    syncShipments(updated);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify(updated));
+    } catch (e) {}
   };
 
   const handleProgressChange = (id, progress) => {
     if (!checkPermission('SHIPMENTS')) return;
-    setShipments(shipments.map(s => {
+    const updated = shipments.map(s => {
       if (s.id === id) {
         return { ...s, progress: Number(progress) };
       }
       return s;
-    }));
+    });
+    setShipments(updated);
+    syncShipments(updated);
+    try {
+      localStorage.setItem('tactical_shipments', JSON.stringify(updated));
+    } catch (e) {}
   };
 
   const handleApproveLot = (lotId) => {
@@ -334,12 +433,45 @@ export default function DataControlModal({
     const target = incheonInventory.waitingInspection.find(l => l.id === lotId);
     if (!target) return;
 
-    setIncheonInventory({
+    const updated = {
       waitingInspection: incheonInventory.waitingInspection.filter(l => l.id !== lotId),
       passedInspection: [
         { ...target, status: '출하합격', readyForExport: true },
         ...incheonInventory.passedInspection
       ]
+    };
+    setIncheonInventory(updated);
+    syncIncheonInventory(updated);
+    try {
+      localStorage.setItem('tactical_incheon_inventory', JSON.stringify(updated));
+    } catch (e) {}
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' ? `[승인 완료] ${target.id} 로트가 '출하합격 (선적 준비완료)' 상태로 이동되었습니다.` : `Lot ${target.id} approved for shipment.`
+    });
+  };
+
+  const handleReturnLotToWaiting = (lotId) => {
+    if (!checkPermission('INCHEON')) return;
+    sound.playClick();
+    const target = incheonInventory.passedInspection.find(l => l.id === lotId);
+    if (!target) return;
+
+    const updated = {
+      waitingInspection: [
+        { ...target, status: '검사대기', readyForExport: false },
+        ...incheonInventory.waitingInspection
+      ],
+      passedInspection: incheonInventory.passedInspection.filter(l => l.id !== lotId)
+    };
+    setIncheonInventory(updated);
+    syncIncheonInventory(updated);
+    try {
+      localStorage.setItem('tactical_incheon_inventory', JSON.stringify(updated));
+    } catch (e) {}
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' ? `[환원 완료] ${target.id} 로트가 다시 '검사대기 목록'으로 복귀되었습니다.` : `Lot ${target.id} returned to pending inspection.`
     });
   };
 
@@ -681,7 +813,76 @@ export default function DataControlModal({
 
               <form onSubmit={handleAddShipment} className={`border p-3.5 space-y-3 transition-opacity ${!canEditShipments ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#101b2d] border-cyan-700/60'}`}>
                 <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
-                  <Plus className="w-4 h-4" /> 신규 운송 차수 등록
+                  <Plus className="w-4 h-4" /> {lang === 'en' ? 'Register New Shipment Batch' : '신규 운송 차수 등록'}
+                </div>
+
+                {/* 1. Import Incheon Passed Inspection Lots for Dispatch */}
+                <div className="bg-[#0b1726] border border-cyan-700/60 p-2.5 rounded space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-cyan-800/80 pb-1.5">
+                    <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
+                      <PackageCheck className="w-4 h-4 text-emerald-400" />
+                      <span>{lang === 'en' ? 'Load Incheon Passed Lots (Ready to Ship)' : '인천 출하합격(선적 준비완료) 로트 불러와 차수 편성'}</span>
+                      <span className="text-[10px] text-emerald-300 font-normal">
+                        ({incheonInventory.passedInspection.length}건 대기중)
+                      </span>
+                    </div>
+                    {incheonInventory.passedInspection.length > 0 && (
+                      <span className="text-[10px] text-slate-300 font-mono">
+                        {lang === 'en' ? 'Available Stock:' : '선적 대기 합계:'} <b className="text-emerald-400">{incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()}</b> EA
+                      </span>
+                    )}
+                  </div>
+
+                  {incheonInventory.passedInspection.length === 0 ? (
+                    <div className="text-[11px] text-slate-400 py-1 flex items-center gap-1.5">
+                      <span className="text-amber-400">ℹ️</span>
+                      <span>{lang === 'en' ? 'No inspection-passed lots available. You can enter quantity manually, or approve lots in the Incheon tab.' : '출하합격 상태의 로트가 없습니다. 수량을 직접 입력하거나 [인천 로트 관리] 탭에서 합격 승인하세요.'}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="text-[10.5px] text-slate-300">
+                        {lang === 'en' ? 'Click lots below to automatically load quantities and item names into this shipment:' : '출하합격된 로트를 클릭하여 이번 운송 차수에 적재할 품목으로 자동 반영하세요:'}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                        {incheonInventory.passedInspection.map(lot => {
+                          const isSelected = selectedLotIds.includes(lot.id);
+                          return (
+                            <button
+                              key={lot.id}
+                              type="button"
+                              disabled={!canEditShipments}
+                              onClick={() => handleToggleSelectLot(lot)}
+                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
+                                isSelected 
+                                  ? 'bg-emerald-800 text-white border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-300' 
+                                  : 'bg-[#122338] text-cyan-200 border-cyan-700 hover:border-cyan-400 hover:bg-[#18314e]'
+                              }`}
+                            >
+                              <span>{isSelected ? '✓' : '+'}</span>
+                              <span className="font-mono">{lot.id}</span>
+                              <span className="text-slate-300 font-normal">({lot.name})</span>
+                              <span className="text-amber-300 font-mono">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {selectedLotIds.length > 0 && (
+                        <div className="pt-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[10.5px] text-emerald-300 border-t border-cyan-900/80">
+                          <span>✅ {selectedLotIds.length}개 로트 선택됨 (총 {incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0).toLocaleString()} EA 적재)</span>
+                          <label className="flex items-center gap-1.5 text-slate-200 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={deductPassedLotsOnDispatch}
+                              onChange={e => setDeductPassedLotsOnDispatch(e.target.checked)}
+                              className="accent-cyan-400"
+                            />
+                            <span>차수 등록 시 출하합격 목록에서 차감/선적완료 처리</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -793,18 +994,33 @@ export default function DataControlModal({
                     <Ship className="w-4 h-4 text-cyan-400" />
                     <span>현재 운송중인 차수 목록 ({shipments.length}건)</span>
                   </div>
-                  <button
-                    disabled={!canEditShipments}
-                    onClick={handleSaveShipments}
-                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
-                      !canEditShipments
-                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                        : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                    }`}
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>운송 차수 클라우드 저장</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={!canEditShipments || shipments.length === 0}
+                      onClick={handleDeleteAllShipments}
+                      className={`px-2.5 py-1.5 font-bold text-xs rounded border flex items-center gap-1 transition-all shadow ${
+                        !canEditShipments || shipments.length === 0
+                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-40'
+                          : 'bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-600 hover:border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.2)]'
+                      }`}
+                      title={lang === 'en' ? 'Delete all shipments' : '모든 운송 차수 전체 삭제'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'en' ? 'Delete All' : '전체 삭제'}</span>
+                    </button>
+                    <button
+                      disabled={!canEditShipments}
+                      onClick={handleSaveShipments}
+                      className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
+                        !canEditShipments
+                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                          : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                      }`}
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>운송 차수 클라우드 저장</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -1025,14 +1241,30 @@ export default function DataControlModal({
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {incheonInventory.passedInspection.map(lot => (
-                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 flex items-center justify-between">
+                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 flex items-center justify-between gap-2">
                         <div>
                           <div className="text-white font-bold">{lot.id}</div>
                           <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
                         </div>
-                        <span className="text-emerald-400 font-bold text-[10px] border border-emerald-600 px-1.5 py-0.5">
-                          수출 선적대기
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-400 font-bold text-[10px] border border-emerald-600 px-1.5 py-0.5">
+                            수출 선적대기
+                          </span>
+                          <button
+                            type="button"
+                            disabled={!canEditIncheon}
+                            onClick={() => handleReturnLotToWaiting(lot.id)}
+                            className={`px-2 py-0.5 text-[10.5px] font-bold rounded border flex items-center gap-1 transition-colors ${
+                              !canEditIncheon
+                                ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-40'
+                                : 'bg-[#182638] hover:bg-[#223650] text-amber-300 border-amber-500/60 hover:border-amber-400'
+                            }`}
+                            title={lang === 'en' ? 'Return to pending inspection' : '검사대기 목록으로 되돌리기'}
+                          >
+                            <RotateCcw className="w-3 h-3 text-amber-400" />
+                            <span>{lang === 'en' ? 'Return' : '검사대기로 환원'}</span>
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
