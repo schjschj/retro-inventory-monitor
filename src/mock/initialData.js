@@ -1,13 +1,13 @@
 export const INITIAL_INCHEON_INVENTORY = {
   waitingInspection: [
-    { id: 'LOT-KR-2409-A01', name: 'Power Module Core', quantity: 2400, date: '2026-09-08', status: '검사대기', note: '외관 및 X-Ray 대기' },
-    { id: 'LOT-KR-2409-A02', name: 'Cap Sub-Assembly', quantity: 1800, date: '2026-09-09', status: '검사대기', note: '신뢰성 시료 검사' },
-    { id: 'LOT-KR-2409-A03', name: 'Multi Base Frame', quantity: 3200, date: '2026-09-09', status: '검사대기', note: '입고 수입검사' }
+    { id: 'LOT-KR-2409-A01', product: 'ESS8-1', name: 'ESS8-1 Power Module Core', quantity: 2400, date: '2026-09-08', status: '검사대기', note: '외관 및 X-Ray 대기' },
+    { id: 'LOT-KR-2409-A02', product: 'ESS8-1', name: 'ESS8-1 Cap Sub-Assembly', quantity: 1800, date: '2026-09-09', status: '검사대기', note: '신뢰성 시료 검사' },
+    { id: 'LOT-KR-2409-A03', product: 'ESS11-1', name: 'ESS11-1 Multi Base Frame', quantity: 3200, date: '2026-09-09', status: '검사대기', note: '입고 수입검사' }
   ],
   passedInspection: [
-    { id: 'LOT-KR-2408-P88', name: 'Cap Assy Standard', quantity: 4500, date: '2026-09-07', status: '출하합격', readyForExport: true },
-    { id: 'LOT-KR-2408-P89', name: 'Multi Assy High-V', quantity: 5100, date: '2026-09-07', status: '출하합격', readyForExport: true },
-    { id: 'LOT-KR-2408-P90', name: 'Back Ship Module', quantity: 1200, date: '2026-09-08', status: '출하합격', readyForExport: true }
+    { id: 'LOT-KR-2408-P88', product: 'ESS8-1', name: 'ESS8-1 Cap Assy Standard', quantity: 4500, date: '2026-09-07', status: '출하합격', readyForExport: true },
+    { id: 'LOT-KR-2408-P89', product: 'ESS11-1', name: 'ESS11-1 Multi Assy High-V', quantity: 5100, date: '2026-09-07', status: '출하합격', readyForExport: true },
+    { id: 'LOT-KR-2408-P90', product: 'ESS8-1', name: 'ESS8-1 Back Ship Module', quantity: 1200, date: '2026-09-08', status: '출하합격', readyForExport: true }
   ]
 };
 
@@ -15,6 +15,7 @@ export const INITIAL_SHIPMENTS = [
   {
     id: 'SHIP-SEA-2601',
     batchNo: '해상 26-01차',
+    product: 'ESS8-1',
     type: 'SEA',
     containerNo: 'TGHU-892104-2',
     vesselName: 'HMM PACIFIC GLORY',
@@ -22,9 +23,9 @@ export const INITIAL_SHIPMENTS = [
     eta: '2026-09-18',
     quantity: 12500,
     items: [
-      { name: 'Multi Assy', qty: 7000 },
-      { name: 'Cap Assy', qty: 4500 },
-      { name: 'Back ship', qty: 1000 }
+      { name: 'ESS8-1 Multi Assy', qty: 7000 },
+      { name: 'ESS8-1 Cap Assy', qty: 4500 },
+      { name: 'ESS8-1 Back ship', qty: 1000 }
     ],
     status: 'TRANSIT_OCEAN',
     progress: 47,
@@ -36,6 +37,7 @@ export const INITIAL_SHIPMENTS = [
   {
     id: 'SHIP-AIR-2602',
     batchNo: '항공 26-02차 긴급',
+    product: 'ESS11-1',
     type: 'AIR',
     containerNo: 'AKE-94021-KE',
     vesselName: 'KOREAN AIR CARGO 0244',
@@ -43,8 +45,8 @@ export const INITIAL_SHIPMENTS = [
     eta: '2026-09-10',
     quantity: 3200,
     items: [
-      { name: 'Cap Assy (긴급공정분)', qty: 2800 },
-      { name: 'Multi Assy 시제품', qty: 400 }
+      { name: 'ESS11-1 Cap Assy (긴급)', qty: 2800 },
+      { name: 'ESS11-1 Multi Assy 시제품', qty: 400 }
     ],
     status: 'TRANSIT_AIR',
     progress: 72,
@@ -56,6 +58,7 @@ export const INITIAL_SHIPMENTS = [
   {
     id: 'SHIP-SEA-2598',
     batchNo: '해상 25-98차',
+    product: 'ESS8-1',
     type: 'SEA',
     containerNo: 'MSKU-401923-9',
     vesselName: 'EVERGREEN STAR 042',
@@ -63,9 +66,9 @@ export const INITIAL_SHIPMENTS = [
     eta: '2026-09-11',
     quantity: 14800,
     items: [
-      { name: 'Multi Assy', qty: 9500 },
-      { name: 'Cap Assy', qty: 4000 },
-      { name: 'Back ship', qty: 1300 }
+      { name: 'ESS8-1 Multi Assy', qty: 9500 },
+      { name: 'ESS8-1 Cap Assy', qty: 4000 },
+      { name: 'ESS8-1 Back ship', qty: 1300 }
     ],
     status: 'TRANSIT_INLAND_RAIL',
     progress: 88,
@@ -77,6 +80,7 @@ export const INITIAL_SHIPMENTS = [
   {
     id: 'SHIP-SEA-2595',
     batchNo: '해상 25-95차 (지연)',
+    product: 'ESS11-1',
     type: 'SEA',
     containerNo: 'CMAU-772910-1',
     vesselName: 'CMA CGM TAIPEI',
@@ -84,8 +88,8 @@ export const INITIAL_SHIPMENTS = [
     eta: '2026-09-07',
     quantity: 8200,
     items: [
-      { name: 'Multi Assy', qty: 5200 },
-      { name: 'Cap Assy', qty: 3000 }
+      { name: 'ESS11-1 Multi Assy', qty: 5200 },
+      { name: 'ESS11-1 Cap Assy', qty: 3000 }
     ],
     status: 'TRANSIT_DELAYED',
     progress: 96,
@@ -102,6 +106,10 @@ export const INITIAL_KOKOMO_INVENTORY = {
   multiAssy: 18450,
   capAssy: 12300,
   backShip: 3850,
+  byProduct: {
+    'ESS8-1': { multiAssy: 11070, capAssy: 7380, backShip: 2310 },
+    'ESS11-1': { multiAssy: 7380, capAssy: 4920, backShip: 1540 }
+  },
   history: [
     { time: '09-08 14:20', event: 'SPE 3호 라인 1,200 EA 인도' },
     { time: '09-07 10:15', event: '해상 25-94차 입고 완료 (+11,000 EA)' },
@@ -113,10 +121,14 @@ export const INITIAL_SPE_INVENTORY = {
   customerName: '고객 SPE (Semiconductor Plant)',
   location: '미국 내 반도체/배터리 클러스터',
   totalInventory: 24800,
+  byProduct: {
+    'ESS8-1': 14880,
+    'ESS11-1': 9920
+  },
   lots: [
-    { lot: 'SPE-LN1-8842', name: 'Multi Assy Ready', qty: 9600, status: '생산라인 가동중' },
-    { lot: 'SPE-LN2-8845', name: 'Cap Assy Buffer', qty: 11400, status: '버퍼 재고' },
-    { lot: 'SPE-HOLD-102', name: 'Inspection Hold', qty: 3800, status: '품질 샘플링' }
+    { lot: 'SPE-LN1-8842', product: 'ESS8-1', name: 'ESS8-1 Multi Assy Ready', qty: 9600, status: '생산라인 가동중' },
+    { lot: 'SPE-LN2-8845', product: 'ESS11-1', name: 'ESS11-1 Cap Assy Buffer', qty: 11400, status: '버퍼 재고' },
+    { lot: 'SPE-HOLD-102', product: 'ESS8-1', name: 'ESS8-1 Inspection Hold', qty: 3800, status: '품질 샘플링' }
   ],
   dailyConsumption: 20000,
   safetyStock: 15000

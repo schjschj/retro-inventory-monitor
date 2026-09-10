@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Radio, 
   Volume2, 
@@ -11,7 +12,9 @@ import {
   Settings,
   Layers,
   Lock,
-  Unlock
+  Unlock,
+  ChevronDown,
+  Package
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { t } from '../utils/i18n';
@@ -37,8 +40,22 @@ export default function Header({
   authRole = null,
   setAuthRole,
   onOpenAdminAuth,
-  isCloudSynced = false
+  isCloudSynced = false,
+  selectedProduct = 'ESS8-1',
+  setSelectedProduct
 }) {
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
+  const productMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (productMenuRef.current && !productMenuRef.current.contains(e.target)) {
+        setIsProductMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const handleSoundToggle = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
@@ -104,6 +121,57 @@ export default function Header({
               {t('appTitle', lang)}
             </h1>
           </div>
+        </div>
+
+        {/* Product Selector Dropdown (ESS8-1 / ESS11-1 / ALL) */}
+        <div className="relative flex-shrink-0" ref={productMenuRef}>
+          <button
+            onClick={() => {
+              sound.playClick();
+              setIsProductMenuOpen(!isProductMenuOpen);
+            }}
+            className="px-2.5 py-1 bg-[#152e4d] hover:bg-[#1c3c64] border-2 border-cyan-400 text-white font-mono font-black text-xs rounded flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,240,255,0.35)] transition-all cursor-pointer"
+            title={lang === 'ko' ? '품목 선택 (상황별 재고/물류 필터)' : 'Select Product Model'}
+          >
+            <Package className="w-3.5 h-3.5 text-cyan-300" />
+            <span className="tracking-wide">{selectedProduct === 'ALL' ? (lang === 'ko' ? '전체 품목' : 'ALL ITEMS') : selectedProduct}</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-cyan-300 transition-transform ${isProductMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isProductMenuOpen && (
+            <div className="absolute top-full mt-1.5 left-0 w-44 bg-[#09111c] border-2 border-cyan-400 shadow-2xl z-50 p-1 font-mono space-y-1 animate-fadeIn">
+              <div className="px-2 py-1 text-[10px] text-slate-400 border-b border-slate-700 font-bold">
+                {lang === 'ko' ? '■ 품목별 전술 관제 선택' : '■ Select Product Model'}
+              </div>
+              {[
+                { id: 'ESS8-1', label: 'ESS8-1', desc: lang === 'ko' ? '기본 모델 (Main Line)' : 'Primary Line' },
+                { id: 'ESS11-1', label: 'ESS11-1', desc: lang === 'ko' ? '확장 모델 (Extended Line)' : 'Extended Line' },
+                { id: 'ALL', label: lang === 'ko' ? '전체 품목 (ALL)' : 'ALL ITEMS', desc: lang === 'ko' ? '통합 합산 뷰' : 'Combined View' }
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    sound.playClick();
+                    if (setSelectedProduct) setSelectedProduct(item.id);
+                    setIsProductMenuOpen(false);
+                  }}
+                  className={`w-full text-left p-1.5 rounded transition-all flex items-center justify-between ${
+                    selectedProduct === item.id 
+                      ? 'bg-cyan-950 border border-cyan-400 text-white font-black' 
+                      : 'hover:bg-[#121f33] text-slate-300 border border-transparent'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-bold">{item.label}</div>
+                    <div className="text-[9px] text-slate-400">{item.desc}</div>
+                  </div>
+                  {selectedProduct === item.id && (
+                    <span className="text-xs text-cyan-400 font-bold">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Controls & Actions (Single-row flex-nowrap) */}

@@ -118,6 +118,38 @@ export default function App() {
     spe: true
   });
 
+  // Selected Product Model State ('ESS8-1' | 'ESS11-1' | 'ALL')
+  const [selectedProduct, setSelectedProduct] = useState(() => {
+    try {
+      return localStorage.getItem('tactical_selected_product') || 'ESS8-1';
+    } catch (e) {
+      return 'ESS8-1';
+    }
+  });
+
+  const handleSelectProduct = (prod) => {
+    setSelectedProduct(prod);
+    try {
+      localStorage.setItem('tactical_selected_product', prod);
+    } catch (e) {}
+  };
+
+  // Theme Mode State ('dark' | 'light')
+  const [themeMode, setThemeMode] = useState(() => {
+    try {
+      return localStorage.getItem('tactical_theme_mode') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
+  });
+
+  const handleSetThemeMode = (mode) => {
+    setThemeMode(mode);
+    try {
+      localStorage.setItem('tactical_theme_mode', mode);
+    } catch (e) {}
+  };
+
   // Modals
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -270,22 +302,57 @@ export default function App() {
     sound.playSuccess();
   };
 
+  const currentSimMs = simTime.getTime();
+
+  const isShipmentDeparted = (s) => {
+    if (!s.departureDate) return true;
+    const depMs = new Date(s.departureDate).getTime();
+    if (isNaN(depMs)) return true;
+    return currentSimMs >= depMs;
+  };
+
   // Dynamic Simulation Calculation: Arrived Shipments vs In-Transit Shipments
   const arrivedShipments = useMemo(() => {
     return (shipments || []).filter(s => (Number(s.progress) || 0) >= 100);
   }, [shipments]);
 
+  // Active In-Transit: MUST be departed and progress < 100! (Un-departed future shipments excluded)
   const activeTransitShipments = useMemo(() => {
-    return (shipments || []).filter(s => (Number(s.progress) || 0) < 100);
-  }, [shipments]);
+    return (shipments || []).filter(s => isShipmentDeparted(s) && (Number(s.progress) || 0) < 100);
+  }, [shipments, currentSimMs]);
 
-  // Dynamic Kokomo Inventory: Base Kokomo stock + all arrived shipments transferred into facility
+  // Filtered Inventory Data by Selected Product ('ESS8-1' | 'ESS11-1' | 'ALL')
+  const filteredIncheonInventory = useMemo(() => {
+    if (selectedProduct === 'ALL') return incheonInventory;
+    return {
+      ...incheonInventory,
+      waitingInspection: (incheonInventory.waitingInspection || []).filter(l => 
+        (l.product || (l.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')) === selectedProduct
+      ),
+      passedInspection: (incheonInventory.passedInspection || []).filter(l => 
+        (l.product || (l.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')) === selectedProduct
+      )
+    };
+  }, [incheonInventory, selectedProduct]);
+
+  const filteredShipments = useMemo(() => {
+    if (selectedProduct === 'ALL') return shipments;
+    return (shipments || []).filter(s => 
+      (s.product || (s.items?.[0]?.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')) === selectedProduct
+    );
+  }, [shipments, selectedProduct]);
+
+  // Dynamic Kokomo Inventory: Base Kokomo stock + arrived shipments
   const effectiveKokomoInventory = useMemo(() => {
     let addMulti = 0;
     let addCap = 0;
     let addBack = 0;
 
-    arrivedShipments.forEach(s => {
+    const targetArrived = arrivedShipments.filter(s => 
+      selectedProduct === 'ALL' || (s.product || (s.items?.[0]?.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')) === selectedProduct
+    );
+
+    targetArrived.forEach(s => {
       if (Array.isArray(s.items) && s.items.length > 0) {
         s.items.forEach(it => {
           const name = (it.name || '').toLowerCase();
@@ -303,14 +370,21 @@ export default function App() {
       }
     });
 
-    const recentArrivalEvents = arrivedShipments.map(s => ({
+    const recentArrivalEvents = targetArrived.map(s => ({
       time: s.eta ? s.eta.slice(5) : '입고',
       event: `${s.batchNo || '차수'} 코코모 입고 완료 (+${(Number(s.quantity) || 0).toLocaleString()} EA)`
     })).reverse().slice(0, 5);
 
-    const baseMulti = Number(kokomoInventory.multiAssy) || 0;
-    const baseCap = Number(kokomoInventory.capAssy) || 0;
-    const baseBack = Number(kokomoInventory.backShip) || 0;
+    let baseMulti = Number(kokomoInventory.multiAssy) || 0;
+    let baseCap = Number(kokomoInventory.capAssy) || 0;
+    let baseBack = Number(kokomoInventory.backShip) || 0;
+
+    if (selectedProduct !== 'ALL' && kokomoInventory.byProduct?.[selectedProduct]) {
+      const prodStock = kokomoInventory.byProduct[selectedProduct];
+      baseMulti = Number(prodStock.multiAssy) || 0;
+      baseCap = Number(prodStock.capAssy) || 0;
+      baseBack = Number(prodStock.backShip) || 0;
+    }
 
     return {
       ...kokomoInventory,
@@ -319,15 +393,28 @@ export default function App() {
       backShip: baseBack + addBack,
       baseTotal: baseMulti + baseCap + baseBack,
       arrivedQty: addMulti + addCap + addBack,
-      arrivedCount: arrivedShipments.length,
+      arrivedCount: targetArrived.length,
       history: [
         ...recentArrivalEvents,
         ...(kokomoInventory.history || [])
       ].slice(0, 10)
     };
-  }, [kokomoInventory, arrivedShipments]);
+  }, [kokomoInventory, arrivedShipments, selectedProduct]);
 
-  const delayedShipments = shipments.filter(s => s.isDelayed);
+  // Dynamic SPE Inventory
+  const effectiveSpeInventory = useMemo(() => {
+    if (selectedProduct !== 'ALL' && speInventory.byProduct?.[selectedProduct]) {
+      const prodSpe = speInventory.byProduct[selectedProduct];
+      return {
+        ...speInventory,
+        totalInventory: Number(prodSpe.totalInventory) || 0,
+        dailyConsumption: Number(prodSpe.dailyConsumption) || 12000
+      };
+    }
+    return speInventory;
+  }, [speInventory, selectedProduct]);
+
+  const delayedShipments = filteredShipments.filter(s => s.isDelayed);
 
   const getFontScaleClass = () => {
     switch (fontScale) {
@@ -340,7 +427,7 @@ export default function App() {
 
   return (
     <div 
-      className={`min-h-screen w-full max-w-full overflow-x-hidden ${highContrast ? 'bg-black high-contrast-theme' : 'bg-[#070b14]'} text-slate-100 flex flex-col ${crtEnabled ? 'crt-overlay' : ''} ${getFontScaleClass()}`}
+      className={`min-h-screen w-full max-w-full overflow-x-hidden ${highContrast ? 'bg-black high-contrast-theme' : themeMode === 'light' ? 'light-theme' : 'bg-[#070b14]'} text-slate-100 flex flex-col ${crtEnabled ? 'crt-overlay' : ''} ${getFontScaleClass()}`}
       style={{
         zoom: fontScale === 'compact' ? 1.0 : fontScale === 'large' ? 1.20 : fontScale === 'xlarge' ? 1.30 : 1.10
       }}
@@ -369,6 +456,8 @@ export default function App() {
         setAuthRole={setAuthRole}
         onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
         isCloudSynced={isCloudSynced}
+        selectedProduct={selectedProduct}
+        setSelectedProduct={handleSelectProduct}
       />
 
       {/* Main Tactical Map Viewport */}
@@ -377,10 +466,10 @@ export default function App() {
         {/* World Map Component */}
         <div className="relative flex-1 w-full">
           <RetroWorldMap
-            shipments={shipments}
-            incheonInventory={incheonInventory}
+            shipments={filteredShipments}
+            incheonInventory={filteredIncheonInventory}
             kokomoInventory={effectiveKokomoInventory}
-            speInventory={speInventory}
+            speInventory={effectiveSpeInventory}
             customSpeCoords={customSpeCoords}
             onSelectShipment={(s) => {
               setSelectedShipment(s);
@@ -395,10 +484,10 @@ export default function App() {
 
           {/* Top-Right Inventory Summary HUD (with toggle/collapse & category checkboxes) */}
           <InventorySummaryHud
-            incheonInventory={incheonInventory}
-            shipments={shipments}
+            incheonInventory={filteredIncheonInventory}
+            shipments={filteredShipments}
             kokomoInventory={effectiveKokomoInventory}
-            speInventory={speInventory}
+            speInventory={effectiveSpeInventory}
             isVisible={isHudVisible}
             onToggleVisibility={() => setIsHudVisible(!isHudVisible)}
             activeFilter={activeFilter}
@@ -406,6 +495,8 @@ export default function App() {
             includedCategories={includedCategories}
             setIncludedCategories={setIncludedCategories}
             lang={lang}
+            simTime={simTime}
+            selectedProduct={selectedProduct}
           />
 
           {/* Delay Alert Notification Banner (Bottom/Center) */}
@@ -421,7 +512,7 @@ export default function App() {
 
         {/* Bottom Transit Schedule Table */}
         <BottomTransitTable
-          shipments={shipments}
+          shipments={filteredShipments}
           onSelectShipment={(s) => {
             setSelectedShipment(s);
             setIsDataModalOpen(true);
@@ -429,6 +520,7 @@ export default function App() {
           activeFilter={activeFilter}
           onOpenDataModal={() => setIsDataModalOpen(true)}
           lang={lang}
+          simTime={simTime}
         />
       </main>
 
@@ -484,6 +576,8 @@ export default function App() {
         isAdmin={isAdmin}
         authRole={authRole}
         onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
+        themeMode={themeMode}
+        setThemeMode={handleSetThemeMode}
       />
 
       {/* Admin Passcode Authentication Modal */}

@@ -111,6 +111,7 @@ export default function DataControlModal({
 
   const [newShipment, setNewShipment] = useState({
     batchNo: '',
+    product: 'ESS8-1',
     type: 'SEA',
     vesselName: '',
     containerNo: '',
@@ -128,6 +129,7 @@ export default function DataControlModal({
   const [editingShipmentId, setEditingShipmentId] = useState(null);
   const [editShipmentForm, setEditShipmentForm] = useState({
     batchNo: '',
+    product: 'ESS8-1',
     type: 'SEA',
     vesselName: '',
     containerNo: '',
@@ -143,7 +145,8 @@ export default function DataControlModal({
 
   const [newLot, setNewLot] = useState({
     id: `LOT-KR-${Date.now().toString().slice(-4)}`,
-    name: 'Multi Assy Standard',
+    product: 'ESS8-1',
+    name: 'ESS8-1',
     quantity: 2000,
     date: new Date().toISOString().slice(0, 10),
     status: '검사대기',
@@ -340,6 +343,7 @@ export default function DataControlModal({
     const created = {
       ...newShipment,
       id: `SHIP-${newShipment.type}-${Date.now().toString().slice(-4)}`,
+      product: newShipment.product || 'ESS8-1',
       quantity: Number(newShipment.quantity),
       progress: Number(newShipment.progress),
       items
@@ -370,6 +374,7 @@ export default function DataControlModal({
     sound.playSuccess();
     setNewShipment({
       batchNo: '',
+      product: 'ESS8-1',
       type: 'SEA',
       vesselName: '',
       containerNo: '',
@@ -427,6 +432,7 @@ export default function DataControlModal({
     setEditingShipmentId(s.id);
     setEditShipmentForm({
       batchNo: s.batchNo || '',
+      product: s.product || (s.items?.[0]?.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1'),
       type: s.type || 'SEA',
       vesselName: s.vesselName || '',
       containerNo: s.containerNo || '',
@@ -449,6 +455,7 @@ export default function DataControlModal({
         return {
           ...s,
           batchNo: editShipmentForm.batchNo || s.batchNo,
+          product: editShipmentForm.product || s.product || 'ESS8-1',
           type: editShipmentForm.type,
           vesselName: editShipmentForm.vesselName,
           containerNo: editShipmentForm.containerNo,
@@ -575,16 +582,23 @@ export default function DataControlModal({
     e.preventDefault();
     if (!checkPermission('INCHEON')) return;
     sound.playSuccess();
+    const prod = newLot.product || 'ESS8-1';
     setIncheonInventory({
       ...incheonInventory,
       waitingInspection: [
-        { ...newLot, quantity: Number(newLot.quantity) },
+        { 
+          ...newLot, 
+          product: prod,
+          name: prod,
+          quantity: Number(newLot.quantity) 
+        },
         ...incheonInventory.waitingInspection
       ]
     });
     setNewLot({
       id: `LOT-KR-${Date.now().toString().slice(-4)}`,
-      name: 'Multi Assy Standard',
+      product: prod,
+      name: prod,
       quantity: 2000,
       date: new Date().toISOString().slice(0, 10),
       status: '검사대기',
@@ -723,16 +737,6 @@ export default function DataControlModal({
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {currentRole && (
-              <button
-                onClick={handleSaveAllData}
-                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded border border-emerald-400 flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.4)] transition-all"
-                title="현재 화면의 모든 변경사항을 클라우드에 영구 저장"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{lang === 'en' ? 'SAVE ALL DATA' : '전체 데이터 저장'}</span>
-              </button>
-            )}
             <button
               onClick={() => {
                 sound.playClick();
@@ -1001,7 +1005,20 @@ export default function DataControlModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5">
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">품목 모델</label>
+                    <select
+                      value={newShipment.product || 'ESS8-1'}
+                      onChange={e => setNewShipment({ ...newShipment, product: e.target.value })}
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
+                    >
+                      <option value="ESS8-1">ESS8-1</option>
+                      <option value="ESS11-1">ESS11-1</option>
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block text-slate-400 text-[10px] mb-1">차수명</label>
                     <input
@@ -1125,18 +1142,6 @@ export default function DataControlModal({
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{lang === 'en' ? 'Delete All' : '전체 삭제'}</span>
                     </button>
-                    <button
-                      disabled={!canEditShipments}
-                      onClick={handleSaveShipments}
-                      className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
-                        !canEditShipments
-                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                          : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                      }`}
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>운송 차수 클라우드 저장</span>
-                    </button>
                   </div>
                 </div>
 
@@ -1152,7 +1157,19 @@ export default function DataControlModal({
                           <span className="text-[10px] text-slate-400 font-mono">ID: {s.id}</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 text-xs">
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">품목 모델</label>
+                            <select
+                              value={editShipmentForm.product || 'ESS8-1'}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, product: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            >
+                              <option value="ESS8-1">ESS8-1</option>
+                              <option value="ESS11-1">ESS11-1</option>
+                            </select>
+                          </div>
+
                           <div>
                             <label className="block text-slate-400 text-[10px] mb-1">차수명</label>
                             <input
@@ -1372,23 +1389,11 @@ export default function DataControlModal({
                 </div>
               )}
 
-              <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex items-center justify-between">
                 <div className="text-slate-300 font-bold flex items-center gap-2">
                   <Factory className="w-4 h-4 text-cyan-400" />
                   <span>인천 생산 및 출하합격 재고 현황 ({incheonInventory.waitingInspection.length + incheonInventory.passedInspection.length}개 로트)</span>
                 </div>
-                <button
-                  disabled={!canEditIncheon}
-                  onClick={handleSaveIncheon}
-                  className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
-                    !canEditIncheon
-                      ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                      : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                  }`}
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>인천 로트 재고 클라우드 저장</span>
-                </button>
               </div>
 
               <form onSubmit={handleAddLot} className={`border p-3 space-y-2 transition-opacity ${!canEditIncheon ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#0f1d2c] border-cyan-800'}`}>
@@ -1408,15 +1413,19 @@ export default function DataControlModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 text-[10px] mb-1">품목명</label>
-                    <input
-                      type="text"
-                      value={newLot.name}
-                      onChange={e => setNewLot({ ...newLot, name: e.target.value })}
+                    <label className="block text-slate-400 text-[10px] mb-1">품목 모델</label>
+                    <select
+                      value={newLot.product || 'ESS8-1'}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewLot({ ...newLot, product: val, name: val });
+                      }}
                       disabled={!canEditIncheon}
                       className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
-                      required
-                    />
+                    >
+                      <option value="ESS8-1">ESS8-1</option>
+                      <option value="ESS11-1">ESS11-1</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-slate-400 text-[10px] mb-1">수량 (EA)</label>
@@ -1556,18 +1565,6 @@ export default function DataControlModal({
                     <Building2 className="w-4 h-4 text-amber-400" />
                     <span>미주법인 (코코모) 3대 재고 직접 조정</span>
                   </div>
-                  <button
-                    disabled={!canEditKokomo}
-                    onClick={handleSaveKokomo}
-                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
-                      !canEditKokomo
-                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                        : 'bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
-                    }`}
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>미주법인 재고 클라우드 저장</span>
-                  </button>
                 </div>
 
                 {arrivedQty > 0 && (
@@ -1634,18 +1631,6 @@ export default function DataControlModal({
                     <Factory className="w-4 h-4 text-emerald-400" />
                     <span>고객 SPE 현장 잔여 재고 및 일일 소진율</span>
                   </div>
-                  <button
-                    disabled={!canEditSpe}
-                    onClick={handleSaveSpe}
-                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
-                      !canEditSpe
-                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
-                    }`}
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>고객 SPE 재고 클라우드 저장</span>
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
@@ -1771,19 +1756,6 @@ export default function DataControlModal({
                   {!canUploadExcel ? (lang === 'en' ? '🔒 Authorization Required (Login)' : '🔒 권한 필요 (로그인)') : (lang === 'en' ? 'Browse File...' : '파일 찾아보기...')}
                 </label>
 
-                {currentRole && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={handleSaveAllData}
-                      className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold border border-emerald-400 rounded shadow flex items-center gap-1.5 mx-auto"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>{lang === 'en' ? '💾 SAVE ALL DATA (Cloud & Local Storage)' : '💾 전체 데이터 저장 (클라우드 & 로컬 영구 반영)'}</span>
-                    </button>
-                  </div>
-                )}
-
                 {uploadMessage && (
                   <div className={`p-2 border text-xs font-bold ${
                     uploadMessage.type === 'success' 
@@ -1813,15 +1785,14 @@ export default function DataControlModal({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {currentRole && (
-              <button
-                onClick={handleSaveAllData}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-black text-xs rounded flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.35)] transition-all whitespace-nowrap"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>전체 데이터 일괄 저장</span>
-              </button>
-            )}
+            <button
+              onClick={handleSaveAllData}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-black text-xs rounded flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.35)] transition-all whitespace-nowrap cursor-pointer"
+              title={currentRole ? "전체 거점 재고 및 운송 차수 데이터를 클라우드에 영구 저장" : "관리자 로그인 후 저장 가능"}
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>전체 데이터 일괄 저장</span>
+            </button>
             <button
               onClick={() => {
                 sound.playClick();

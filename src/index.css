@@ -98,6 +98,110 @@
   background-color: #000000 !important;
 }
 
+/* Light Theme Mode: Crisp bright slate styling for daylight office viewing */
+.light-theme {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.light-theme header {
+  background-color: #ffffff !important;
+  border-bottom-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-theme header h1 {
+  color: #0f172a !important;
+}
+
+.light-theme .pixel-box {
+  background-color: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.light-theme .bg-\[\#070d1a\],
+.light-theme .bg-\[\#08101e\],
+.light-theme .bg-\[\#070b14\],
+.light-theme .bg-\[\#09101d\],
+.light-theme .bg-\[\#0c1322\],
+.light-theme .bg-\[\#0a0f1c\],
+.light-theme .bg-\[\#090e1a\],
+.light-theme .bg-\[\#090f1d\] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.light-theme svg rect[fill="#08101e"] {
+  fill: #e2e8f0 !important;
+}
+
+.light-theme svg g[fill="#0e1728"] {
+  fill: #cbd5e1 !important;
+  stroke: #94a3b8 !important;
+}
+
+.light-theme svg g[fill="#14233c"] {
+  fill: #cbd5e1 !important;
+  stroke: #94a3b8 !important;
+}
+
+.light-theme svg path[fill="#122036"] {
+  fill: #b0c4de !important;
+}
+
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-slate-100,
+.light-theme .text-slate-200,
+.light-theme .text-slate-300 {
+  color: #1e293b !important;
+}
+
+.light-theme .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light-theme .border-cyan-400,
+.light-theme .border-cyan-500\/50,
+.light-theme .border-cyan-600,
+.light-theme .border-cyan-700,
+.light-theme .border-cyan-800,
+.light-theme .border-\[\#1c2d42\],
+.light-theme .border-\[\#223652\] {
+  border-color: #94a3b8 !important;
+}
+
+.light-theme .bg-\[\#121f36\],
+.light-theme .bg-\[\#111e33\],
+.light-theme .bg-\[\#101b2d\],
+.light-theme .bg-\[\#152e4d\],
+.light-theme .bg-\[\#131f35\],
+.light-theme .bg-\[\#142238\] {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light-theme table thead tr {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light-theme table tbody tr:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.light-theme ::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
+
 .high-contrast-theme input,
 .high-contrast-theme select {
   background-color: #050505 !important;

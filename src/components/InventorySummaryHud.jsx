@@ -27,7 +27,9 @@ export default function InventorySummaryHud({
   setActiveFilter,
   includedCategories,
   setIncludedCategories,
-  lang = 'ko'
+  lang = 'ko',
+  simTime,
+  selectedProduct = 'ESS8-1'
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Free custom position: { x, y }
@@ -36,13 +38,23 @@ export default function InventorySummaryHud({
   const hudRef = useRef(null);
   const dragInfoRef = useRef({ startMouseX: 0, startMouseY: 0, startX: 0, startY: 0 });
 
+  // Current simulation timestamp
+  const currentMs = simTime ? new Date(simTime).getTime() : Date.now();
+  const isDeparted = (s) => {
+    if (!s.departureDate) return true;
+    const depMs = new Date(s.departureDate).getTime();
+    if (isNaN(depMs)) return true;
+    return currentMs >= depMs;
+  };
+
   // Item totals
   const incheonWaiting = (incheonInventory.waitingInspection || []).reduce((a, b) => a + (Number(b.quantity) || 0), 0);
   const incheonPassed = (incheonInventory.passedInspection || []).reduce((a, b) => a + (Number(b.quantity) || 0), 0);
   const incheonTotal = incheonWaiting + incheonPassed;
 
-  // Active In-Transit vs Arrived at Kokomo
-  const activeTransitShipments = (shipments || []).filter(s => (Number(s.progress) || 0) < 100);
+  // Active In-Transit (Only shipments that have departed and progress < 100)
+  const activeTransitShipments = (shipments || []).filter(s => isDeparted(s) && (Number(s.progress) || 0) < 100);
+  const pendingShipments = (shipments || []).filter(s => !isDeparted(s) && (Number(s.progress) || 0) < 100);
   const arrivedShipments = (shipments || []).filter(s => (Number(s.progress) || 0) >= 100);
   const transitTotal = activeTransitShipments.reduce((a, b) => a + (Number(b.quantity) || 0), 0);
   const arrivedTotal = arrivedShipments.reduce((a, b) => a + (Number(b.quantity) || 0), 0);
@@ -165,8 +177,8 @@ export default function InventorySummaryHud({
             <span className="text-xs font-black text-cyan-300 tracking-wider">
               {t('hudTitle', lang)}
             </span>
-            <span className="text-[9px] text-cyan-400/90 font-semibold bg-cyan-950/80 px-1 py-0.2 border border-cyan-500/40 rounded">
-              {t('dragToMove', lang)}
+            <span className="text-[9px] text-cyan-300 font-bold bg-cyan-950 px-1.5 py-0.2 border border-cyan-400 rounded">
+              {selectedProduct === 'ALL' ? (lang === 'ko' ? '전체 품목' : 'ALL') : selectedProduct}
             </span>
           </div>
 
@@ -330,10 +342,19 @@ export default function InventorySummaryHud({
                     {transitTotal.toLocaleString()} EA
                   </span>
                 </div>
-                {arrivedShipments.length > 0 && includedCategories.transit && (
-                  <div className="text-[9px] text-slate-400 pl-6 flex justify-between pt-0.5 border-t border-slate-800/60 mt-1">
-                    <span>운송중: {activeTransitShipments.length}건</span>
-                    <span className="text-emerald-400 font-mono">코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)</span>
+                {includedCategories.transit && (
+                  <div className="text-[9px] text-slate-400 pl-6 flex flex-col gap-0.5 pt-0.5 border-t border-slate-800/60 mt-1">
+                    <div className="flex justify-between items-center">
+                      <span>해상/항공 운송중: {activeTransitShipments.length}건</span>
+                      {pendingShipments.length > 0 && (
+                        <span className="text-amber-400 font-bold">
+                          (출항대기 {pendingShipments.length}건 제외)
+                        </span>
+                      )}
+                    </div>
+                    {arrivedShipments.length > 0 && (
+                      <span className="text-emerald-400 font-mono">코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)</span>
+                    )}
                   </div>
                 )}
               </div>

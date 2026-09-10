@@ -17,7 +17,9 @@ import {
   Key, 
   ShieldCheck, 
   CheckCircle2, 
-  AlertTriangle 
+  AlertTriangle,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { KEY_NODES } from '../utils/geoCoordinates';
@@ -52,7 +54,9 @@ export default function SettingsModal({
   onUpdateCommanderPhoto,
   isAdmin = false,
   authRole = null,
-  onOpenAdminAuth
+  onOpenAdminAuth,
+  themeMode = 'dark',
+  setThemeMode
 }) {
   const incheonInputRef = useRef(null);
   const kokomoInputRef = useRef(null);
@@ -338,6 +342,63 @@ export default function SettingsModal({
                 }`}
               >
                 {showPhotos ? t('useOn', lang) : t('useOff', lang)}
+              </button>
+            </div>
+          </div>
+
+          {/* 3.4 Theme Mode (Dark Tactical vs Light Mode) */}
+          <div className="bg-[#101b2d] border border-cyan-800 p-3.5 space-y-2.5">
+            <div className="font-bold text-cyan-300 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>{lang === 'ko' ? '시스템 테마 모드' : 'System Theme Mode'}</span>
+              </div>
+              <span className="text-[10px] text-cyan-400 font-mono">
+                {themeMode === 'light' ? '☀️ LIGHT MODE' : '🌙 DARK TACTICAL'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  if (setThemeMode) setThemeMode('dark');
+                }}
+                className={`p-2.5 border text-left rounded transition-all cursor-pointer ${
+                  themeMode === 'dark'
+                    ? 'bg-cyan-950/80 border-cyan-400 text-cyan-200 font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]'
+                    : 'bg-[#09111c] border-slate-700 text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-cyan-300">
+                  <Moon className="w-3.5 h-3.5" />
+                  <span>{lang === 'ko' ? '다크 전술 모드 (기본)' : 'Dark Tactical (Default)'}</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">
+                  {lang === 'ko' ? '사이버펑크 네온 & 저조도 모니터링 환경 최적화' : 'Low-light tactical command style'}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  if (setThemeMode) setThemeMode('light');
+                }}
+                className={`p-2.5 border text-left rounded transition-all cursor-pointer ${
+                  themeMode === 'light'
+                    ? 'bg-amber-100 border-amber-500 text-slate-900 font-bold shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                    : 'bg-[#09111c] border-slate-700 text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-amber-500">
+                  <Sun className="w-3.5 h-3.5" />
+                  <span>{lang === 'ko' ? '라이트 모드' : 'Light Mode'}</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1">
+                  {lang === 'ko' ? '주간 및 밝은 사무실 환경을 위한 고선명 화이트 테마' : 'Bright theme for daylight office viewing'}
+                </div>
               </button>
             </div>
           </div>

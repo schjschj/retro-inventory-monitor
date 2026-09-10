@@ -20,8 +20,12 @@ export default function BottomTransitTable({
   onSelectShipment,
   activeFilter,
   onOpenDataModal,
-  lang = 'ko'
+  lang = 'ko',
+  simTime
 }) {
+  const currentMs = simTime ? new Date(simTime).getTime() : Date.now();
+  const isDeparted = (s) => isNaN(new Date(s.departureDate).getTime()) || currentMs >= new Date(s.departureDate).getTime();
+
   const filteredShipments = (shipments || []).filter(s => {
     if (!activeFilter) return true;
     if (activeFilter === 'TRANSIT') return true;
@@ -99,7 +103,12 @@ export default function BottomTransitTable({
                       </span>
                     </span>
                   </td>
-                  <td className="p-2 font-bold text-white">{formatBatchNo(s.batchNo, lang)}</td>
+                  <td className="p-2 font-bold text-white flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-950 border border-cyan-500/60 text-cyan-300 font-mono font-bold">
+                      {s.product || (s.items?.[0]?.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')}
+                    </span>
+                    <span>{formatBatchNo(s.batchNo, lang)}</span>
+                  </td>
                   <td className="p-2 text-slate-300">{s.vesselName}</td>
                   <td className="p-2 font-mono text-cyan-300 font-bold">{s.containerNo}</td>
                   <td className="p-2 text-slate-300 font-mono">
@@ -109,13 +118,19 @@ export default function BottomTransitTable({
                     {(Number(s.quantity) || 0).toLocaleString()} EA
                   </td>
                   <td className="p-2 text-slate-300 text-[10px]">
-                    {s.progress <= 70 
-                      ? (lang === 'ko' ? '태평양 해상 항해' : 'Pacific Voyage') 
-                      : s.progress < 100 
-                      ? (s.inlandMode === 'TRUCK' 
-                          ? (lang === 'ko' ? '미 내륙 싱글(트럭)' : 'US Overland Truck') 
-                          : (lang === 'ko' ? '미 내륙 철송(철도)' : 'US Overland Rail')) 
-                      : (lang === 'ko' ? '코코모 법인 입고' : 'Delivered Kokomo')}
+                    {!isDeparted(s) ? (
+                      <span className="text-amber-400 font-bold">
+                        {lang === 'ko' ? '출항 대기 (미출발)' : 'Pending Departure'}
+                      </span>
+                    ) : s.progress <= 70 ? (
+                      lang === 'ko' ? '태평양 해상 항해' : 'Pacific Voyage'
+                    ) : s.progress < 100 ? (
+                      s.inlandMode === 'TRUCK' 
+                        ? (lang === 'ko' ? '미 내륙 싱글(트럭)' : 'US Overland Truck') 
+                        : (lang === 'ko' ? '미 내륙 철송(철도)' : 'US Overland Rail')
+                    ) : (
+                      lang === 'ko' ? '코코모 법인 입고' : 'Delivered Kokomo'
+                    )}
                   </td>
                   <td className="p-2">
                     <div className="flex items-center gap-2">
