@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Plus, 
@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Lock,
   Unlock,
-  Key
+  Key,
+  Save
 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { 
@@ -24,7 +25,7 @@ import {
   downloadSampleTemplate, 
   parseUploadedFile, 
   normalizeDateSafe, 
-  calculateRealProgress,
+  calculateRealProgress, 
   formatDateDisplay 
 } from '../utils/excelParser';
 
@@ -49,11 +50,39 @@ export default function DataControlModal({
   const [uploadMessage, setUploadMessage] = useState(null);
 
   const currentRole = authRole || (isAdmin ? 'MASTER_ADMIN' : null);
+  const isViewer = !currentRole;
   const canEditIncheon = currentRole === 'INCHEON_LEAD' || currentRole === 'MASTER_ADMIN';
   const canEditShipments = currentRole === 'INCHEON_LEAD' || currentRole === 'MASTER_ADMIN';
   const canEditKokomo = currentRole === 'USA_LEAD' || currentRole === 'MASTER_ADMIN';
   const canEditSpe = currentRole === 'USA_LEAD' || currentRole === 'MASTER_ADMIN';
   const canUploadExcel = currentRole === 'MASTER_ADMIN' || currentRole === 'INCHEON_LEAD';
+
+  // Local editable form states for Kokomo and SPE to ensure clean Save actions
+  const [kokomoForm, setKokomoForm] = useState({
+    multiAssy: kokomoInventory.multiAssy,
+    capAssy: kokomoInventory.capAssy,
+    backShip: kokomoInventory.backShip
+  });
+
+  const [speForm, setSpeForm] = useState({
+    totalInventory: speInventory.totalInventory,
+    dailyConsumption: speInventory.dailyConsumption
+  });
+
+  useEffect(() => {
+    setKokomoForm({
+      multiAssy: kokomoInventory.multiAssy,
+      capAssy: kokomoInventory.capAssy,
+      backShip: kokomoInventory.backShip
+    });
+  }, [kokomoInventory.multiAssy, kokomoInventory.capAssy, kokomoInventory.backShip]);
+
+  useEffect(() => {
+    setSpeForm({
+      totalInventory: speInventory.totalInventory,
+      dailyConsumption: speInventory.dailyConsumption
+    });
+  }, [speInventory.totalInventory, speInventory.dailyConsumption]);
 
   const [newShipment, setNewShipment] = useState({
     batchNo: '',
@@ -113,6 +142,99 @@ export default function DataControlModal({
       return false;
     }
     return true;
+  };
+
+  const handleSaveKokomo = (e) => {
+    if (e) e.preventDefault();
+    if (!checkPermission('KOKOMO')) return;
+    const updated = {
+      ...kokomoInventory,
+      multiAssy: Number(kokomoForm.multiAssy) || 0,
+      capAssy: Number(kokomoForm.capAssy) || 0,
+      backShip: Number(kokomoForm.backShip) || 0
+    };
+    setKokomoInventory(updated);
+    sound.playSuccess();
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' 
+        ? `[저장 성공] 미주법인 재고가 클라우드에 영구 저장되었습니다! (Multi: ${Number(kokomoForm.multiAssy).toLocaleString()}, Cap: ${Number(kokomoForm.capAssy).toLocaleString()}, Back: ${Number(kokomoForm.backShip).toLocaleString()} EA)`
+        : `[Success] Kokomo inventory saved to cloud successfully!`
+    });
+  };
+
+  const handleSaveSpe = (e) => {
+    if (e) e.preventDefault();
+    if (!checkPermission('SPE')) return;
+    const updated = {
+      ...speInventory,
+      totalInventory: Number(speForm.totalInventory) || 0,
+      dailyConsumption: Number(speForm.dailyConsumption) || 1400
+    };
+    setSpeInventory(updated);
+    sound.playSuccess();
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko'
+        ? `[저장 성공] 고객 SPE 재고가 클라우드에 영구 저장되었습니다! (총재고: ${Number(speForm.totalInventory).toLocaleString()} EA, 일일소진: ${Number(speForm.dailyConsumption).toLocaleString()} EA/일)`
+        : `[Success] Customer SPE inventory saved to cloud successfully!`
+    });
+  };
+
+  const handleSaveIncheon = () => {
+    if (!checkPermission('INCHEON')) return;
+    setIncheonInventory({ ...incheonInventory });
+    sound.playSuccess();
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' 
+        ? `[저장 성공] 인천 로트 재고가 클라우드에 영구 저장되었습니다! (검사대기: ${incheonInventory.waitingInspection.length}건, 출하합격: ${incheonInventory.passedInspection.length}건)`
+        : `[Success] Incheon inventory saved to cloud successfully!`
+    });
+  };
+
+  const handleSaveShipments = () => {
+    if (!checkPermission('SHIPMENTS')) return;
+    setShipments([...shipments]);
+    sound.playSuccess();
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' 
+        ? `[저장 성공] 전체 운송 차수(${shipments.length}건) 현황이 클라우드에 영구 저장되었습니다!`
+        : `[Success] All shipments saved to cloud successfully!`
+    });
+  };
+
+  const handleSaveAllData = () => {
+    if (!currentRole) {
+      sound.playAlert();
+      if (onOpenAdminAuth) onOpenAdminAuth();
+      return;
+    }
+    sound.playSuccess();
+    if (canEditIncheon) setIncheonInventory({ ...incheonInventory });
+    if (canEditShipments) setShipments([...shipments]);
+    if (canEditKokomo) {
+      setKokomoInventory({
+        ...kokomoInventory,
+        multiAssy: Number(kokomoForm.multiAssy) || 0,
+        capAssy: Number(kokomoForm.capAssy) || 0,
+        backShip: Number(kokomoForm.backShip) || 0
+      });
+    }
+    if (canEditSpe) {
+      setSpeInventory({
+        ...speInventory,
+        totalInventory: Number(speForm.totalInventory) || 0,
+        dailyConsumption: Number(speForm.dailyConsumption) || 1400
+      });
+    }
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' 
+        ? '✅ 모든 거점의 데이터가 클라우드 및 브라우저에 성공적으로 영구 저장되었습니다!' 
+        : '✅ All data successfully saved to cloud and storage!'
+    });
   };
 
   const handleAddShipment = (e) => {
@@ -320,16 +442,48 @@ export default function DataControlModal({
               [데이터 통제 센터] 재고 관리 & 엑셀 입출력
             </h2>
           </div>
-          <button
-            onClick={() => {
-              sound.playClick();
-              onClose();
-            }}
-            className="p-1 hover:bg-[#203352] text-slate-400 hover:text-white rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {currentRole && (
+              <button
+                onClick={handleSaveAllData}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded border border-emerald-400 flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.4)] transition-all"
+                title="현재 화면의 모든 변경사항을 클라우드에 영구 저장"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{lang === 'en' ? 'SAVE ALL DATA' : '전체 데이터 저장'}</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onClose();
+              }}
+              className="p-1 hover:bg-[#203352] text-slate-400 hover:text-white rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {/* Top Floating Notification Banner for Save Confirmation */}
+        {uploadMessage && (
+          <div className={`px-4 py-2 text-xs font-bold flex items-center justify-between border-b ${
+            uploadMessage.type === 'success' 
+              ? 'bg-emerald-950 border-emerald-500 text-emerald-200 shadow-inner' 
+              : 'bg-rose-950 border-rose-500 text-rose-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span>{uploadMessage.text}</span>
+            </div>
+            <button 
+              onClick={() => setUploadMessage(null)}
+              className="text-slate-400 hover:text-white text-[11px] underline ml-2"
+            >
+              닫기
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Role Authentication Status Banner */}
         <div className={`px-4 py-2.5 flex items-center justify-between text-xs border-b ${
@@ -472,7 +626,28 @@ export default function DataControlModal({
         <div className="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
           {activeTab === 'SHIPMENTS' && (
             <div className="space-y-4">
-              <form onSubmit={handleAddShipment} className="bg-[#101b2d] border border-cyan-700/60 p-3.5 space-y-3">
+              {!canEditShipments && (
+                <div className="p-3 bg-amber-950/80 border border-amber-500/80 text-amber-200 rounded flex items-center justify-between shadow">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span>
+                      {lang === 'en'
+                        ? 'LOCKED: Incheon Lead PIN (1001) or Master Admin PIN (31796) required to add or modify shipments.'
+                        : '🔒 [수정 불가] 운송 차수 등록 및 진행률 변경이 잠겨 있습니다. (인천 담당자 PIN: 1001 또는 마스터 PIN: 31796 필요)'}
+                    </span>
+                  </div>
+                  {isViewer && (
+                    <button
+                      onClick={() => { sound.playClick(); if (onOpenAdminAuth) onOpenAdminAuth(); }}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded whitespace-nowrap ml-2 shadow"
+                    >
+                      로그인
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <form onSubmit={handleAddShipment} className={`border p-3.5 space-y-3 transition-opacity ${!canEditShipments ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#101b2d] border-cyan-700/60'}`}>
                 <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
                   <Plus className="w-4 h-4" /> 신규 운송 차수 등록
                 </div>
@@ -485,7 +660,8 @@ export default function DataControlModal({
                       placeholder="예: 해상 26-05차"
                       value={newShipment.batchNo}
                       onChange={e => setNewShipment({ ...newShipment, batchNo: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       required
                     />
                   </div>
@@ -495,7 +671,8 @@ export default function DataControlModal({
                     <select
                       value={newShipment.type}
                       onChange={e => setNewShipment({ ...newShipment, type: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                     >
                       <option value="SEA">해상 컨테이너선 (SEA)</option>
                       <option value="AIR">항공 화물기 (AIR)</option>
@@ -510,7 +687,8 @@ export default function DataControlModal({
                       placeholder="예: HMM OLYMPUS"
                       value={newShipment.vesselName}
                       onChange={e => setNewShipment({ ...newShipment, vesselName: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       required
                     />
                   </div>
@@ -521,7 +699,8 @@ export default function DataControlModal({
                       type="number"
                       value={newShipment.quantity}
                       onChange={e => setNewShipment({ ...newShipment, quantity: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       min="1"
                     />
                   </div>
@@ -533,7 +712,8 @@ export default function DataControlModal({
                       placeholder="예: MSCU-99120-1"
                       value={newShipment.containerNo}
                       onChange={e => setNewShipment({ ...newShipment, containerNo: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                     />
                   </div>
 
@@ -543,7 +723,8 @@ export default function DataControlModal({
                       type="datetime-local"
                       value={newShipment.departureDate}
                       onChange={e => setNewShipment({ ...newShipment, departureDate: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none text-[11px]"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none text-[11px] ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                     />
                   </div>
 
@@ -553,14 +734,20 @@ export default function DataControlModal({
                       type="datetime-local"
                       value={newShipment.eta}
                       onChange={e => setNewShipment({ ...newShipment, eta: e.target.value })}
-                      className="w-full bg-[#09111c] border border-slate-700 p-1.5 text-white focus:border-cyan-400 outline-none text-[11px]"
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none text-[11px] ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                     />
                   </div>
 
                   <div className="flex items-end">
                     <button
                       type="submit"
-                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold p-1.5 border border-cyan-400 shadow flex items-center justify-center gap-1 transition-colors"
+                      disabled={!canEditShipments}
+                      className={`w-full font-bold p-1.5 border flex items-center justify-center gap-1 transition-colors ${
+                        !canEditShipments
+                          ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                          : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
+                      }`}
                     >
                       <Plus className="w-4 h-4" /> 차수 추가
                     </button>
@@ -569,9 +756,23 @@ export default function DataControlModal({
               </form>
 
               <div className="space-y-2">
-                <div className="text-slate-400 font-bold flex justify-between">
-                  <span>현재 운송중인 차수 목록</span>
-                  <span className="text-slate-500">진행률 슬라이더로 위치를 즉시 조정할 수 있습니다.</span>
+                <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="text-slate-300 font-bold flex items-center gap-2">
+                    <Ship className="w-4 h-4 text-cyan-400" />
+                    <span>현재 운송중인 차수 목록 ({shipments.length}건)</span>
+                  </div>
+                  <button
+                    disabled={!canEditShipments}
+                    onClick={handleSaveShipments}
+                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
+                      !canEditShipments
+                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                        : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                    }`}
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>운송 차수 클라우드 저장</span>
+                  </button>
                 </div>
 
                 <div className="space-y-2">
@@ -611,14 +812,18 @@ export default function DataControlModal({
                             max="100"
                             value={s.progress}
                             onChange={(e) => handleProgressChange(s.id, e.target.value)}
-                            className="w-full accent-cyan-400 cursor-pointer"
+                            disabled={!canEditShipments}
+                            className={`w-full accent-cyan-400 ${!canEditShipments ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
                           />
                         </div>
 
                         <button
+                          disabled={!canEditShipments}
                           onClick={() => handleToggleDelay(s.id)}
-                          className={`px-2 py-1 border text-[11px] font-bold ${
-                            s.isDelayed 
+                          className={`px-2 py-1 border text-[11px] font-bold transition-all ${
+                            !canEditShipments
+                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                              : s.isDelayed 
                               ? 'bg-rose-950 border-rose-500 text-rose-300' 
                               : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
                           }`}
@@ -627,8 +832,13 @@ export default function DataControlModal({
                         </button>
 
                         <button
+                          disabled={!canEditShipments}
                           onClick={() => handleDeleteShipment(s.id)}
-                          className="p-1.5 bg-[#261517] hover:bg-rose-900 border border-rose-700 text-rose-300 rounded"
+                          className={`p-1.5 border rounded transition-all ${
+                            !canEditShipments
+                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                              : 'bg-[#261517] hover:bg-rose-900 border-rose-700 text-rose-300'
+                          }`}
                           title="차수 삭제"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -644,7 +854,47 @@ export default function DataControlModal({
 
           {activeTab === 'INCHEON' && (
             <div className="space-y-4">
-              <form onSubmit={handleAddLot} className="bg-[#0f1d2c] border border-cyan-800 p-3 space-y-2">
+              {!canEditIncheon && (
+                <div className="p-3 bg-amber-950/80 border border-amber-500/80 text-amber-200 rounded flex items-center justify-between shadow">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span>
+                      {lang === 'en'
+                        ? 'LOCKED: Incheon Lead PIN (1001) or Master Admin PIN (31796) required to edit Incheon stock.'
+                        : '🔒 [수정 불가] 인천 공정 로트 등록 및 승인이 잠겨 있습니다. (인천 담당자 PIN: 1001 또는 마스터 PIN: 31796 필요)'}
+                    </span>
+                  </div>
+                  {isViewer && (
+                    <button
+                      onClick={() => { sound.playClick(); if (onOpenAdminAuth) onOpenAdminAuth(); }}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded whitespace-nowrap ml-2 shadow"
+                    >
+                      로그인
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-slate-300 font-bold flex items-center gap-2">
+                  <Factory className="w-4 h-4 text-cyan-400" />
+                  <span>인천 생산 및 출하합격 재고 현황 ({incheonInventory.waitingInspection.length + incheonInventory.passedInspection.length}개 로트)</span>
+                </div>
+                <button
+                  disabled={!canEditIncheon}
+                  onClick={handleSaveIncheon}
+                  className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
+                    !canEditIncheon
+                      ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                      : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  }`}
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>인천 로트 재고 클라우드 저장</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleAddLot} className={`border p-3 space-y-2 transition-opacity ${!canEditIncheon ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#0f1d2c] border-cyan-800'}`}>
                 <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
                   <Plus className="w-4 h-4" /> 인천 신규 생산 로트 등록
                 </div>
@@ -655,7 +905,8 @@ export default function DataControlModal({
                       type="text"
                       value={newLot.id}
                       onChange={e => setNewLot({ ...newLot, id: e.target.value })}
-                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      disabled={!canEditIncheon}
+                      className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       required
                     />
                   </div>
@@ -665,7 +916,8 @@ export default function DataControlModal({
                       type="text"
                       value={newLot.name}
                       onChange={e => setNewLot({ ...newLot, name: e.target.value })}
-                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      disabled={!canEditIncheon}
+                      className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       required
                     />
                   </div>
@@ -675,7 +927,8 @@ export default function DataControlModal({
                       type="number"
                       value={newLot.quantity}
                       onChange={e => setNewLot({ ...newLot, quantity: e.target.value })}
-                      className="w-full bg-[#08111c] border border-slate-700 p-1.5 text-white text-xs"
+                      disabled={!canEditIncheon}
+                      className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
                       min="1"
                       required
                     />
@@ -683,7 +936,12 @@ export default function DataControlModal({
                   <div className="flex items-end">
                     <button
                       type="submit"
-                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-white font-bold p-1.5 border border-cyan-400 text-xs"
+                      disabled={!canEditIncheon}
+                      className={`w-full font-bold p-1.5 border text-xs transition-colors ${
+                        !canEditIncheon
+                          ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                          : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
+                      }`}
                     >
                       검사대기 로트 등록
                     </button>
@@ -709,8 +967,13 @@ export default function DataControlModal({
                           <div className="text-slate-400 text-[10px]">{lot.name} | {lot.quantity.toLocaleString()} EA</div>
                         </div>
                         <button
+                          disabled={!canEditIncheon}
                           onClick={() => handleApproveLot(lot.id)}
-                          className="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[10px] border border-emerald-400"
+                          className={`px-2 py-1 font-bold text-[10px] border transition-all ${
+                            !canEditIncheon
+                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                              : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-400 shadow'
+                          }`}
                         >
                           출하합격 승인
                         </button>
@@ -748,67 +1011,155 @@ export default function DataControlModal({
 
           {activeTab === 'US_STOCK' && (
             <div className="space-y-4">
-              <div className="bg-[#18120b] border border-amber-600 p-3 space-y-3">
-                <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
-                  <Building2 className="w-4 h-4" /> 미주법인 (코코모) 재고 직접 조정
+              {(!canEditKokomo || !canEditSpe) && (
+                <div className="p-3 bg-amber-950/80 border border-amber-500/80 text-amber-200 rounded flex items-center justify-between shadow">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span>
+                      {lang === 'en'
+                        ? 'LOCKED: US Corp Lead PIN (2002) or Master Admin PIN (31796) required to edit US stock.'
+                        : '🔒 [수정 불가] 미주법인 및 SPE 재고 수정이 잠겨 있습니다. (미국 담당자 PIN: 2002 또는 마스터 PIN: 31796 필요)'}
+                    </span>
+                  </div>
+                  {isViewer && (
+                    <button
+                      onClick={() => { sound.playClick(); if (onOpenAdminAuth) onOpenAdminAuth(); }}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded whitespace-nowrap ml-2 shadow"
+                    >
+                      로그인
+                    </button>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              )}
+
+              {/* Kokomo Facility Stock Form */}
+              <div className={`border p-4 space-y-3 rounded transition-opacity ${!canEditKokomo ? 'bg-[#120d07] border-slate-800 opacity-60' : 'bg-[#18120b] border-amber-600'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-800/60 pb-2">
+                  <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
+                    <Building2 className="w-4 h-4 text-amber-400" />
+                    <span>미주법인 (코코모) 3대 재고 직접 조정</span>
+                  </div>
+                  <button
+                    disabled={!canEditKokomo}
+                    onClick={handleSaveKokomo}
+                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
+                      !canEditKokomo
+                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                        : 'bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
+                    }`}
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>미주법인 재고 클라우드 저장</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div>
                     <label className="block text-cyan-300 text-[11px] mb-1 font-bold">Multi Assy 수량 (EA)</label>
                     <input
                       type="number"
-                      value={kokomoInventory.multiAssy}
-                      onChange={e => setKokomoInventory({ ...kokomoInventory, multiAssy: Number(e.target.value) })}
-                      className="w-full bg-[#0c121d] border border-cyan-600 p-2 text-white font-bold"
+                      value={kokomoForm.multiAssy}
+                      onChange={e => setKokomoForm({ ...kokomoForm, multiAssy: e.target.value })}
+                      disabled={!canEditKokomo}
+                      className={`w-full p-2 font-bold outline-none border ${
+                        !canEditKokomo
+                          ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#0c121d] border-cyan-600 text-cyan-200 focus:border-cyan-400'
+                      }`}
                     />
                   </div>
                   <div>
                     <label className="block text-emerald-300 text-[11px] mb-1 font-bold">Cap Assy 수량 (EA)</label>
                     <input
                       type="number"
-                      value={kokomoInventory.capAssy}
-                      onChange={e => setKokomoInventory({ ...kokomoInventory, capAssy: Number(e.target.value) })}
-                      className="w-full bg-[#0c121d] border border-emerald-600 p-2 text-white font-bold"
+                      value={kokomoForm.capAssy}
+                      onChange={e => setKokomoForm({ ...kokomoForm, capAssy: e.target.value })}
+                      disabled={!canEditKokomo}
+                      className={`w-full p-2 font-bold outline-none border ${
+                        !canEditKokomo
+                          ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#0c121d] border-emerald-600 text-emerald-200 focus:border-emerald-400'
+                      }`}
                     />
                   </div>
                   <div>
                     <label className="block text-rose-300 text-[11px] mb-1 font-bold">Back ship 수량 (EA)</label>
                     <input
                       type="number"
-                      value={kokomoInventory.backShip}
-                      onChange={e => setKokomoInventory({ ...kokomoInventory, backShip: Number(e.target.value) })}
-                      className="w-full bg-[#0c121d] border border-rose-600 p-2 text-white font-bold"
+                      value={kokomoForm.backShip}
+                      onChange={e => setKokomoForm({ ...kokomoForm, backShip: e.target.value })}
+                      disabled={!canEditKokomo}
+                      className={`w-full p-2 font-bold outline-none border ${
+                        !canEditKokomo
+                          ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#0c121d] border-rose-600 text-rose-200 focus:border-rose-400'
+                      }`}
                     />
                   </div>
                 </div>
-                <div className="text-[11px] text-amber-300/80">
-                  * 미주법인 전체 재고는 세 품목의 합계로 지도 및 상단 HUD에 자동 반영됩니다.
+
+                <div className="flex items-center justify-between text-[11px] text-amber-300/80 pt-1">
+                  <span>* 미주법인 전체 재고는 세 품목의 합계로 지도 및 상단 HUD에 자동 반영됩니다.</span>
+                  <span className="font-bold text-amber-300">합계: {((Number(kokomoForm.multiAssy) || 0) + (Number(kokomoForm.capAssy) || 0) + (Number(kokomoForm.backShip) || 0)).toLocaleString()} EA</span>
                 </div>
               </div>
 
-              <div className="bg-[#0b1c14] border border-emerald-600 p-3 space-y-3">
-                <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
-                  <Factory className="w-4 h-4" /> 고객 SPE 재고 및 소진율 조정
+              {/* Customer SPE Inventory Form */}
+              <div className={`border p-4 space-y-3 rounded transition-opacity ${!canEditSpe ? 'bg-[#07130e] border-slate-800 opacity-60' : 'bg-[#0b1c14] border-emerald-600'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-800/60 pb-2">
+                  <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
+                    <Factory className="w-4 h-4 text-emerald-400" />
+                    <span>고객 SPE 현장 잔여 재고 및 일일 소진율</span>
+                  </div>
+                  <button
+                    disabled={!canEditSpe}
+                    onClick={handleSaveSpe}
+                    className={`px-3 py-1.5 font-bold text-xs rounded border flex items-center gap-1.5 transition-all shadow ${
+                      !canEditSpe
+                        ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                    }`}
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>고객 SPE 재고 클라우드 저장</span>
+                  </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-slate-300 text-[11px] mb-1">고객 보유 총재고 (EA)</label>
+                    <label className="block text-slate-300 text-[11px] mb-1 font-bold">고객 보유 총재고 (EA)</label>
                     <input
                       type="number"
-                      value={speInventory.totalInventory}
-                      onChange={e => setSpeInventory({ ...speInventory, totalInventory: Number(e.target.value) })}
-                      className="w-full bg-[#07130e] border border-emerald-600 p-2 text-white font-bold"
+                      value={speForm.totalInventory}
+                      onChange={e => setSpeForm({ ...speForm, totalInventory: e.target.value })}
+                      disabled={!canEditSpe}
+                      className={`w-full p-2 font-bold outline-none border ${
+                        !canEditSpe
+                          ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#07130e] border-emerald-600 text-emerald-200 focus:border-emerald-400'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 text-[11px] mb-1">일일 소진량 (EA/일)</label>
+                    <label className="block text-slate-300 text-[11px] mb-1 font-bold">일일 소진량 (EA/일)</label>
                     <input
                       type="number"
-                      value={speInventory.dailyConsumption}
-                      onChange={e => setSpeInventory({ ...speInventory, dailyConsumption: Number(e.target.value) })}
-                      className="w-full bg-[#07130e] border border-emerald-600 p-2 text-white font-bold"
+                      value={speForm.dailyConsumption}
+                      onChange={e => setSpeForm({ ...speForm, dailyConsumption: e.target.value })}
+                      disabled={!canEditSpe}
+                      className={`w-full p-2 font-bold outline-none border ${
+                        !canEditSpe
+                          ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#07130e] border-emerald-600 text-emerald-200 focus:border-emerald-400'
+                      }`}
                     />
                   </div>
+                </div>
+
+                <div className="text-[11px] text-emerald-400/80 pt-1">
+                  * 고객 생산라인 잔여 가동 가능일: <span className="font-bold text-amber-300">
+                    {Number(speForm.dailyConsumption) > 0 ? (Number(speForm.totalInventory) / Number(speForm.dailyConsumption)).toFixed(1) : 0}일분
+                  </span>
                 </div>
               </div>
             </div>
@@ -862,26 +1213,39 @@ export default function DataControlModal({
                 </div>
               </div>
 
-              <div className="border-2 border-dashed border-cyan-500/70 bg-[#0b1424] p-6 text-center space-y-3">
-                <Upload className="w-10 h-10 text-cyan-400 mx-auto animate-bounce" />
+              <div className={`border-2 border-dashed p-6 text-center space-y-3 transition-opacity ${!canUploadExcel ? 'border-slate-800 bg-[#070b13] opacity-60' : 'border-cyan-500/70 bg-[#0b1424]'}`}>
+                <Upload className={`w-10 h-10 mx-auto ${!canUploadExcel ? 'text-slate-600' : 'text-cyan-400 animate-bounce'}`} />
                 <div>
                   <h3 className="text-sm font-bold text-white">엑셀(.xlsx) 또는 CSV 파일 업로드</h3>
                   <p className="text-slate-400 text-xs mt-0.5">
-                    작성된 운송 데이터 파일을 드래그하거나 선택하여 즉시 대시보드에 반영하세요.
+                    {!canUploadExcel
+                      ? '🔒 [업로드 잠김] 인천 담당자 PIN(1001) 또는 마스터 PIN(31796) 로그인 후 업로드할 수 있습니다.'
+                      : '작성된 운송 데이터 파일을 드래그하거나 선택하여 즉시 대시보드 및 클라우드에 영구 반영하세요.'}
                   </p>
                 </div>
                 <input
                   type="file"
                   accept=".xlsx, .xls, .csv"
                   onChange={handleFileUpload}
+                  disabled={!canUploadExcel}
                   className="hidden"
                   id="excelFileInput"
                 />
                 <label
-                  htmlFor="excelFileInput"
-                  className="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold cursor-pointer border border-cyan-300 shadow transition-colors"
+                  htmlFor={canUploadExcel ? "excelFileInput" : undefined}
+                  onClick={() => {
+                    if (!canUploadExcel) {
+                      sound.playAlert();
+                      if (onOpenAdminAuth) onOpenAdminAuth();
+                    }
+                  }}
+                  className={`inline-block px-4 py-2 font-bold border transition-colors ${
+                    !canUploadExcel
+                      ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
+                      : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer border-cyan-300 shadow'
+                  }`}
                 >
-                  파일 찾아보기...
+                  {!canUploadExcel ? '🔒 권한 필요 (로그인)' : '파일 찾아보기...'}
                 </label>
 
                 {uploadMessage && (
@@ -898,16 +1262,40 @@ export default function DataControlModal({
           )}
         </div>
 
-        <div className="bg-[#101b2d] px-4 py-2.5 border-t border-slate-700 flex justify-end">
-          <button
-            onClick={() => {
-              sound.playClick();
-              onClose();
-            }}
-            className="px-4 py-1.5 bg-[#1f2e46] hover:bg-[#2b3e5e] text-white border border-slate-500 font-bold"
-          >
-            닫기
-          </button>
+        <div className="bg-[#101b2d] px-4 py-2.5 border-t border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            {currentRole ? (
+              <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>데이터 입력 후 [저장] 버튼을 누르면 클라우드(DB)와 브라우저에 즉시 영구 보존됩니다.</span>
+              </span>
+            ) : (
+              <span className="text-[11px] text-amber-400 font-bold flex items-center gap-1">
+                <Lock className="w-3.5 h-3.5" />
+                <span>현재 열람 모드입니다. 데이터를 수정하려면 우측 상단 로그인 버튼을 누르세요.</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {currentRole && (
+              <button
+                onClick={handleSaveAllData}
+                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-black text-xs rounded flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.35)] transition-all whitespace-nowrap"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>전체 데이터 일괄 저장</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onClose();
+              }}
+              className="px-4 py-1.5 bg-[#1f2e46] hover:bg-[#2b3e5e] text-white border border-slate-500 font-bold rounded whitespace-nowrap"
+            >
+              닫기
+            </button>
+          </div>
         </div>
 
       </div>

@@ -246,7 +246,7 @@ export default function App() {
 
   return (
     <div 
-      className={`min-h-screen ${highContrast ? 'bg-black contrast-125' : 'bg-[#070b14]'} text-slate-100 flex flex-col ${crtEnabled ? 'crt-overlay' : ''} ${getFontScaleClass()}`}
+      className={`min-h-screen w-full max-w-full overflow-x-hidden ${highContrast ? 'bg-black high-contrast-theme' : 'bg-[#070b14]'} text-slate-100 flex flex-col ${crtEnabled ? 'crt-overlay' : ''} ${getFontScaleClass()}`}
       style={{
         zoom: fontScale === 'compact' ? 1.0 : fontScale === 'large' ? 1.20 : fontScale === 'xlarge' ? 1.30 : 1.10
       }}

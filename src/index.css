@@ -80,3 +80,27 @@
   color: #f43f5e;
   font-weight: 700;
 }
+
+/* High Contrast Mode: Pure black background & ultra-crisp neon borders with zero overflow */
+.high-contrast-theme {
+  background-color: #000000 !important;
+}
+
+.high-contrast-theme .pixel-box {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4) !important;
+}
+
+.high-contrast-theme .bg-\[\#070b14\],
+.high-contrast-theme .bg-\[\#09101d\],
+.high-contrast-theme .bg-\[\#0c1322\],
+.high-contrast-theme .bg-\[\#080d16\] {
+  background-color: #000000 !important;
+}
+
+.high-contrast-theme input,
+.high-contrast-theme select {
+  background-color: #050505 !important;
+  border-color: #38bdf8 !important;
+}
+

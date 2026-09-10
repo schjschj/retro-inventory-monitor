@@ -4,20 +4,31 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = () => {
-  return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl !== 'https://your-project-id.supabase.co' &&
-    !supabaseUrl.includes('placeholder')
+  if (!supabaseUrl || !supabaseAnonKey) return false;
+  const cleanUrl = String(supabaseUrl).trim();
+  return (
+    (cleanUrl.startsWith('https://') || cleanUrl.startsWith('http://')) &&
+    cleanUrl !== 'https://your-project-id.supabase.co' &&
+    !cleanUrl.includes('placeholder') &&
+    !cleanUrl.includes('•••') &&
+    !cleanUrl.includes('••••')
   );
 };
 
-export const supabase = isSupabaseConfigured()
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+let client = null;
+if (isSupabaseConfigured()) {
+  try {
+    client = createClient(supabaseUrl.trim(), supabaseAnonKey.trim(), {
       realtime: {
         params: {
           eventsPerSecond: 10
         }
       }
-    })
-  : null;
+    });
+  } catch (err) {
+    console.warn('Failed to initialize Supabase client:', err);
+    client = null;
+  }
+}
+
+export const supabase = client;

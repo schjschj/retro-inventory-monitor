@@ -8,17 +8,22 @@ import {
 
 // Fetch all initial data from Supabase (or fallback to LocalStorage/mock)
 export async function fetchAllInventoryData() {
-  if (!isSupabaseConfigured() || !supabase) {
-    const savedIncheon = localStorage.getItem('tactical_incheon_inventory');
-    const savedKokomo = localStorage.getItem('tactical_kokomo_inventory');
-    const savedSpe = localStorage.getItem('tactical_spe_inventory');
-    const savedShipments = localStorage.getItem('tactical_shipments');
+  const savedIncheon = localStorage.getItem('tactical_incheon_inventory');
+  const savedKokomo = localStorage.getItem('tactical_kokomo_inventory');
+  const savedSpe = localStorage.getItem('tactical_spe_inventory');
+  const savedShipments = localStorage.getItem('tactical_shipments');
 
+  const parsedIncheon = savedIncheon ? JSON.parse(savedIncheon) : INITIAL_INCHEON_INVENTORY;
+  const parsedKokomo = savedKokomo ? JSON.parse(savedKokomo) : INITIAL_KOKOMO_INVENTORY;
+  const parsedSpe = savedSpe ? JSON.parse(savedSpe) : INITIAL_SPE_INVENTORY;
+  const parsedShipments = savedShipments ? JSON.parse(savedShipments) : INITIAL_SHIPMENTS;
+
+  if (!isSupabaseConfigured() || !supabase) {
     return {
-      incheon: savedIncheon ? JSON.parse(savedIncheon) : INITIAL_INCHEON_INVENTORY,
-      kokomo: savedKokomo ? JSON.parse(savedKokomo) : INITIAL_KOKOMO_INVENTORY,
-      spe: savedSpe ? JSON.parse(savedSpe) : INITIAL_SPE_INVENTORY,
-      shipments: savedShipments ? JSON.parse(savedShipments) : INITIAL_SHIPMENTS
+      incheon: parsedIncheon,
+      kokomo: parsedKokomo,
+      spe: parsedSpe,
+      shipments: parsedShipments
     };
   }
 
@@ -33,19 +38,19 @@ export async function fetchAllInventoryData() {
     const incheonData = incheonRes.data ? {
       waitingInspection: incheonRes.data.waiting_inspection || [],
       passedInspection: incheonRes.data.passed_inspection || []
-    } : INITIAL_INCHEON_INVENTORY;
+    } : parsedIncheon;
 
     const kokomoData = kokomoRes.data ? {
       multiAssy: Number(kokomoRes.data.multi_assy) || 0,
       capAssy: Number(kokomoRes.data.cap_assy) || 0,
       backShip: Number(kokomoRes.data.back_ship) || 0
-    } : INITIAL_KOKOMO_INVENTORY;
+    } : parsedKokomo;
 
     const speData = speRes.data ? {
       totalInventory: Number(speRes.data.total_inventory) || 0,
       dailyConsumption: Number(speRes.data.daily_consumption) || 1400,
       clusterName: speRes.data.cluster_name || '미국 고객사 생산라인'
-    } : INITIAL_SPE_INVENTORY;
+    } : parsedSpe;
 
     const shipmentsData = (shipmentsRes.data && shipmentsRes.data.length > 0)
       ? shipmentsRes.data.map(row => ({
@@ -67,7 +72,15 @@ export async function fetchAllInventoryData() {
           destination: row.destination,
           overlandMode: row.overland_mode
         }))
-      : INITIAL_SHIPMENTS;
+      : parsedShipments;
+
+    // Cache latest fetched data to LocalStorage for fast offline startup
+    try {
+      localStorage.setItem('tactical_incheon_inventory', JSON.stringify(incheonData));
+      localStorage.setItem('tactical_kokomo_inventory', JSON.stringify(kokomoData));
+      localStorage.setItem('tactical_spe_inventory', JSON.stringify(speData));
+      localStorage.setItem('tactical_shipments', JSON.stringify(shipmentsData));
+    } catch (e) {}
 
     return {
       incheon: incheonData,
@@ -76,12 +89,12 @@ export async function fetchAllInventoryData() {
       shipments: shipmentsData
     };
   } catch (error) {
-    console.warn('Failed to fetch from Supabase, falling back to local data:', error);
+    console.warn('Failed to fetch from Supabase, falling back to local storage cache:', error);
     return {
-      incheon: INITIAL_INCHEON_INVENTORY,
-      kokomo: INITIAL_KOKOMO_INVENTORY,
-      spe: INITIAL_SPE_INVENTORY,
-      shipments: INITIAL_SHIPMENTS
+      incheon: parsedIncheon,
+      kokomo: parsedKokomo,
+      spe: parsedSpe,
+      shipments: parsedShipments
     };
   }
 }
@@ -92,7 +105,7 @@ export async function syncIncheonInventory(data) {
     localStorage.setItem('tactical_incheon_inventory', JSON.stringify(data));
   } catch (e) {}
 
-  if (!isSupabaseConfigured() || !supabase) return;
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
     await supabase.from('inventory_incheon').upsert({
@@ -101,8 +114,10 @@ export async function syncIncheonInventory(data) {
       passed_inspection: data.passedInspection || [],
       updated_at: new Date().toISOString()
     });
+    return { success: true };
   } catch (err) {
     console.error('Supabase Incheon sync error:', err);
+    return { success: false, error: err };
   }
 }
 
@@ -112,7 +127,7 @@ export async function syncKokomoInventory(data) {
     localStorage.setItem('tactical_kokomo_inventory', JSON.stringify(data));
   } catch (e) {}
 
-  if (!isSupabaseConfigured() || !supabase) return;
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
     await supabase.from('inventory_kokomo').upsert({
@@ -122,8 +137,10 @@ export async function syncKokomoInventory(data) {
       back_ship: Number(data.backShip) || 0,
       updated_at: new Date().toISOString()
     });
+    return { success: true };
   } catch (err) {
     console.error('Supabase Kokomo sync error:', err);
+    return { success: false, error: err };
   }
 }
 
@@ -133,7 +150,7 @@ export async function syncSpeInventory(data) {
     localStorage.setItem('tactical_spe_inventory', JSON.stringify(data));
   } catch (e) {}
 
-  if (!isSupabaseConfigured() || !supabase) return;
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
     await supabase.from('inventory_spe').upsert({
@@ -143,8 +160,10 @@ export async function syncSpeInventory(data) {
       cluster_name: data.clusterName || '미국 고객사 생산라인',
       updated_at: new Date().toISOString()
     });
+    return { success: true };
   } catch (err) {
     console.error('Supabase SPE sync error:', err);
+    return { success: false, error: err };
   }
 }
 
@@ -154,7 +173,7 @@ export async function syncShipments(shipments) {
     localStorage.setItem('tactical_shipments', JSON.stringify(shipments));
   } catch (e) {}
 
-  if (!isSupabaseConfigured() || !supabase) return;
+  if (!isSupabaseConfigured() || !supabase) return { success: true };
 
   try {
     const rows = shipments.map(s => ({
@@ -178,9 +197,13 @@ export async function syncShipments(shipments) {
       updated_at: new Date().toISOString()
     }));
 
-    await supabase.from('shipments').upsert(rows);
+    if (rows.length > 0) {
+      await supabase.from('shipments').upsert(rows);
+    }
+    return { success: true };
   } catch (err) {
     console.error('Supabase Shipments sync error:', err);
+    return { success: false, error: err };
   }
 }
 
