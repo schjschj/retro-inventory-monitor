@@ -479,6 +479,7 @@ export default function App() {
         isCloudSynced={isCloudSynced}
         selectedProduct={selectedProduct}
         setSelectedProduct={handleSelectProduct}
+        themeMode={themeMode}
       />
 
       {/* Main Tactical Map Viewport */}
@@ -501,6 +502,7 @@ export default function App() {
             lang={lang}
             showPhotos={showPhotos}
             commanderPhotos={commanderPhotos}
+            themeMode={themeMode}
           />
 
           {/* Top-Right Inventory Summary HUD (with toggle/collapse & category checkboxes) */}
@@ -518,6 +520,7 @@ export default function App() {
             lang={lang}
             simTime={simTime}
             selectedProduct={selectedProduct}
+            themeMode={themeMode}
           />
 
           {/* Delay Alert Notification Banner (Bottom/Center) */}
@@ -542,6 +545,7 @@ export default function App() {
           onOpenDataModal={() => setIsDataModalOpen(true)}
           lang={lang}
           simTime={simTime}
+          themeMode={themeMode}
         />
       </main>
 

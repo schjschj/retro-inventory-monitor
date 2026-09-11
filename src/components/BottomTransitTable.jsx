@@ -21,8 +21,10 @@ export default function BottomTransitTable({
   activeFilter,
   onOpenDataModal,
   lang = 'ko',
-  simTime
+  simTime,
+  themeMode = 'dark'
 }) {
+  const isLight = themeMode === 'light';
   const currentMs = simTime ? new Date(simTime).getTime() : Date.now();
   const isDeparted = (s) => isNaN(new Date(s.departureDate).getTime()) || currentMs >= new Date(s.departureDate).getTime();
 
@@ -41,17 +43,19 @@ export default function BottomTransitTable({
   });
 
   return (
-    <div className="w-full bg-[#090e1a] border-t-2 border-[#1c2d42] p-3 font-mono">
+    <div className={`w-full border-t-2 p-3 font-mono transition-colors ${
+      isLight ? 'bg-white border-slate-200 shadow-inner' : 'bg-[#090e1a] border-[#1c2d42]'
+    }`}>
       <div className="max-w-[1920px] mx-auto">
         
         {/* Table Header / Title */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-cyan-400"></span>
-            <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
+            <span className={`w-2.5 h-2.5 ${isLight ? 'bg-blue-600' : 'bg-cyan-400'}`}></span>
+            <span className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-cyan-300'}`}>
               {t('tableTitle', lang)} ({sortedShipments.length})
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               · {lang === 'en' ? 'ETA Ascending' : 'ETA 오름차순'}
             </span>
           </div>
@@ -60,7 +64,9 @@ export default function BottomTransitTable({
               sound.playClick();
               onOpenDataModal();
             }}
-            className="text-[11px] text-cyan-400 hover:text-cyan-200 font-bold underline flex items-center gap-1"
+            className={`text-[11px] font-bold underline flex items-center gap-1 ${
+              isLight ? 'text-blue-600 hover:text-blue-800' : 'text-cyan-400 hover:text-cyan-200'
+            }`}
           >
             <span>+ {t('dataManagement', lang)}</span>
           </button>
@@ -70,7 +76,9 @@ export default function BottomTransitTable({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[11px] border-collapse">
             <thead>
-              <tr className="bg-[#101b2d] text-slate-300 border-b border-slate-700">
+              <tr className={`border-b ${
+                isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-[#101b2d] text-slate-300 border-slate-700'
+              }`}>
                 <th className="p-2 font-bold">{t('colMode', lang)}</th>
                 <th className="p-2 font-bold">{t('colBatch', lang)}</th>
                 <th className="p-2 font-bold">{t('colVessel', lang)}</th>
@@ -82,35 +90,41 @@ export default function BottomTransitTable({
                 <th className="p-2 text-center font-bold">{t('colStatus', lang)}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-200">
+            <tbody className={`divide-y ${
+              isLight ? 'divide-slate-200 text-slate-800' : 'divide-slate-800 text-slate-200'
+            }`}>
               {sortedShipments.map((s) => (
                 <tr 
                   key={s.id} 
                   onClick={() => onSelectShipment(s)}
-                  className="hover:bg-[#142238] cursor-pointer transition-colors"
+                  className={`cursor-pointer transition-colors ${
+                    isLight ? 'hover:bg-slate-50' : 'hover:bg-[#142238]'
+                  }`}
                 >
                   <td className="p-2">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] bg-[#1a283e] border border-slate-600">
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] border ${
+                      isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-[#1a283e] border-slate-600'
+                    }`}>
                       {s.type === 'SEA' ? (
                         s.inlandMode === 'TRUCK' ? (
                           <span className="inline-flex items-center gap-1">
-                            <Ship className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="text-slate-400 text-[9px]">+</span>
-                            <Truck className="w-3.5 h-3.5 text-amber-400" />
+                            <Ship className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-cyan-400'}`} />
+                            <span className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>+</span>
+                            <Truck className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <Ship className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="text-slate-400 text-[9px]">+</span>
-                            <Train className="w-3.5 h-3.5 text-emerald-400" />
+                            <Ship className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-cyan-400'}`} />
+                            <span className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>+</span>
+                            <Train className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                           </span>
                         )
                       ) : s.type === 'AIR' ? (
-                        <Plane className="w-3.5 h-3.5 text-sky-400" />
+                        <Plane className={`w-3.5 h-3.5 ${isLight ? 'text-sky-600' : 'text-sky-400'}`} />
                       ) : s.inlandMode === 'TRUCK' || s.type === 'TRUCK' ? (
-                        <Truck className="w-3.5 h-3.5 text-amber-400" />
+                        <Truck className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                       ) : (
-                        <Train className="w-3.5 h-3.5 text-emerald-400" />
+                        <Train className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                       )}
                       <span className="font-bold">
                         {s.type === 'SEA' 
@@ -125,23 +139,25 @@ export default function BottomTransitTable({
                       </span>
                     </span>
                   </td>
-                  <td className="p-2 font-bold text-white flex items-center gap-1.5">
-                    <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-950 border border-cyan-500/60 text-cyan-300 font-mono font-bold">
+                  <td className={`p-2 font-bold flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold border ${
+                      isLight ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-cyan-950 border-cyan-500/60 text-cyan-300'
+                    }`}>
                       {s.product || (s.items?.[0]?.name?.includes('11-1') ? 'ESS11-1' : 'ESS8-1')}
                     </span>
                     <span>{formatBatchNo(s.batchNo, lang)}</span>
                   </td>
-                  <td className="p-2 text-slate-300">{s.vesselName}</td>
-                  <td className="p-2 font-mono text-cyan-300 font-bold">{s.containerNo}</td>
-                  <td className="p-2 text-slate-300 font-mono">
-                    {formatDateDisplay(s.departureDate)} ➔ <span className={s.isDelayed ? 'text-rose-400 font-bold' : 'text-slate-100 font-bold'}>{formatDateDisplay(s.eta)}</span>
+                  <td className={`p-2 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>{s.vesselName}</td>
+                  <td className={`p-2 font-mono font-bold ${isLight ? 'text-blue-700' : 'text-cyan-300'}`}>{s.containerNo}</td>
+                  <td className={`p-2 font-mono ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                    {formatDateDisplay(s.departureDate)} ➔ <span className={s.isDelayed ? (isLight ? 'text-rose-600 font-bold' : 'text-rose-400 font-bold') : (isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold')}>{formatDateDisplay(s.eta)}</span>
                   </td>
-                  <td className="p-2 text-right font-bold text-amber-300">
+                  <td className={`p-2 text-right font-black ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
                     {(Number(s.quantity) || 0).toLocaleString()} EA
                   </td>
-                  <td className="p-2 text-slate-300 text-[10px]">
+                  <td className={`p-2 text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     {!isDeparted(s) ? (
-                      <span className="text-amber-400 font-bold">
+                      <span className={`font-bold ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
                         {lang === 'ko' ? '출항 대기 (미출발)' : 'Pending Departure'}
                       </span>
                     ) : s.progress <= 70 ? (
@@ -156,22 +172,34 @@ export default function BottomTransitTable({
                   </td>
                   <td className="p-2">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-800 h-2 rounded-none border border-slate-700 overflow-hidden">
+                      <div className={`flex-1 h-2 rounded-none border overflow-hidden ${
+                        isLight ? 'bg-slate-200 border-slate-300' : 'bg-slate-800 border-slate-700'
+                      }`}>
                         <div 
-                          className={`h-full ${s.isDelayed ? 'bg-rose-500' : 'bg-gradient-to-r from-cyan-500 to-emerald-400'}`}
+                          className={`h-full ${s.isDelayed ? 'bg-rose-500' : (isLight ? 'bg-blue-600' : 'bg-gradient-to-r from-cyan-500 to-emerald-400')}`}
                           style={{ width: `${Math.max(0, Math.min(100, Number(s.progress) || 0))}%` }}
                         ></div>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-200 w-8 text-right">{Math.round(Number(s.progress) || 0)}%</span>
+                      <span className={`text-[10px] font-bold w-8 text-right ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                        {Math.round(Number(s.progress) || 0)}%
+                      </span>
                     </div>
                   </td>
                   <td className="p-2 text-center">
                     {s.isDelayed ? (
-                      <span className="px-1.5 py-0.5 bg-rose-950 border border-rose-500 text-rose-400 font-bold text-[10px] inline-flex items-center gap-1 animate-pulse">
+                      <span className={`px-1.5 py-0.5 border font-bold text-[10px] inline-flex items-center gap-1 ${
+                        isLight 
+                          ? 'bg-rose-50 border-rose-300 text-rose-700 animate-pulse' 
+                          : 'bg-rose-950 border-rose-500 text-rose-400 animate-pulse'
+                      }`}>
                         <AlertTriangle className="w-3 h-3" /> {t('delayedBadge', lang)}
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 bg-emerald-950 border border-emerald-500 text-emerald-400 font-bold text-[10px] inline-flex items-center gap-1">
+                      <span className={`px-1.5 py-0.5 border font-bold text-[10px] inline-flex items-center gap-1 ${
+                        isLight 
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
+                          : 'bg-emerald-950 border-emerald-500 text-emerald-400'
+                      }`}>
                         <CheckCircle2 className="w-3 h-3" /> {t('onTimeBadge', lang)}
                       </span>
                     )}

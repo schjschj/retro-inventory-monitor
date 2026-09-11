@@ -133,22 +133,9 @@
   color: #0f172a !important;
 }
 
-.light-theme svg rect[fill="#08101e"] {
-  fill: #e2e8f0 !important;
-}
-
-.light-theme svg g[fill="#0e1728"] {
-  fill: #cbd5e1 !important;
-  stroke: #94a3b8 !important;
-}
-
-.light-theme svg g[fill="#14233c"] {
-  fill: #cbd5e1 !important;
-  stroke: #94a3b8 !important;
-}
-
-.light-theme svg path[fill="#122036"] {
-  fill: #b0c4de !important;
+/* Light theme map route text halo */
+.light-theme .map-route-label {
+  text-shadow: 0 0 4px #ffffff, 0 0 2px #ffffff, 0 1px 2px rgba(255,255,255,0.9);
 }
 
 /* ======================================================== */

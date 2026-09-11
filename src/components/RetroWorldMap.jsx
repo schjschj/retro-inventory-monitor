@@ -14,30 +14,103 @@ export default function RetroWorldMap({
   includedCategories = { incheon: true, transit: true, kokomo: true, spe: true },
   lang = 'ko',
   showPhotos = true,
-  commanderPhotos
+  commanderPhotos,
+  themeMode = 'dark'
 }) {
+  const isLight = themeMode === 'light';
+
+  // Google Maps inspired daylight palette vs Tactical Cyberpunk Dark palette
+  const mapTheme = isLight ? {
+    oceanFill: '#aad3df', // Soft, clean Google Maps ocean water blue
+    gridColor: 'rgba(70, 130, 180, 0.12)',
+    gridTextColor: '#334155',
+    landFill: '#f2efe9', // Google Maps warm sand/cream landmass
+    landStroke: '#d1cdc5',
+    koreaFill: '#e2e8f0', // Clear Korean peninsula
+    koreaStroke: '#475569',
+    koreaTextBg: '#ffffff',
+    koreaTextColor: '#0f172a',
+    seaLabelColor: '#546e7a',
+    japanFill: '#f2efe9',
+    japanStroke: '#d1cdc5',
+    japanTextColor: '#475569',
+    usFill: '#f2efe9',
+    usStroke: '#d1cdc5',
+    greatLakesFill: '#aad3df',
+    greatLakesStroke: '#8ebbc9',
+    hawaiiFill: '#e5e1d8',
+    hawaiiStroke: '#b8b2a7',
+    oceanLabel: '#546e7a',
+    seaRouteGrad: ['#0284c7', '#0369a1', '#1d4ed8'],
+    seaRouteStroke: '#1d4ed8',
+    airRouteGrad: ['#4f46e5', '#6366f1', '#4338ca'],
+    airRouteStroke: '#4f46e5',
+    inlandRouteGrad: ['#059669', '#10b981', '#047857'],
+    inlandRouteStroke: '#059669',
+    seaRouteText: '#1e3a8a',
+    airRouteText: '#3730a3',
+    inlandRouteText: '#064e3b'
+  } : {
+    oceanFill: '#08101e',
+    gridColor: 'rgba(0, 240, 255, 0.15)',
+    gridTextColor: '#00f0ff',
+    landFill: '#0e1728',
+    landStroke: '#1e3350',
+    koreaFill: '#1b3558',
+    koreaStroke: '#00f0ff',
+    koreaTextBg: '#0c182a',
+    koreaTextColor: '#00f0ff',
+    seaLabelColor: '#38bdf8',
+    japanFill: '#14243b',
+    japanStroke: '#26436b',
+    japanTextColor: '#94a3b8',
+    usFill: '#101c30',
+    usStroke: '#294875',
+    greatLakesFill: '#08101e',
+    greatLakesStroke: '#1e385c',
+    hawaiiFill: '#1d3554',
+    hawaiiStroke: '#38bdf8',
+    oceanLabel: '#182d47',
+    seaRouteGrad: ['#00f0ff', '#38bdf8', '#0284c7'],
+    seaRouteStroke: '#00f0ff',
+    airRouteGrad: ['#38bdf8', '#a855f7', '#38bdf8'],
+    airRouteStroke: '#38bdf8',
+    inlandRouteGrad: ['#10b981', '#f59e0b', '#eab308'],
+    inlandRouteStroke: '#10b981',
+    seaRouteText: '#00f0ff',
+    airRouteText: '#38bdf8',
+    inlandRouteText: '#10b981'
+  };
+
   return (
-    <div className="relative w-full h-[680px] bg-[#070d1a] border-2 border-[#1c2d42] overflow-hidden select-none shadow-2xl">
+    <div className={`relative w-full h-[680px] overflow-hidden select-none shadow-2xl border-2 ${
+      isLight ? 'bg-[#aad3df] border-slate-300' : 'bg-[#070d1a] border-[#1c2d42]'
+    }`}>
       
       {/* 1. Tactical Retro Background Grid */}
       <div 
-        className="absolute inset-0 opacity-15 pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
+          opacity: isLight ? 0.4 : 0.15,
           backgroundImage: `
-            linear-gradient(to right, #00f0ff 1px, transparent 1px),
-            linear-gradient(to bottom, #00f0ff 1px, transparent 1px)
+            linear-gradient(to right, ${mapTheme.gridColor} 1px, transparent 1px),
+            linear-gradient(to bottom, ${mapTheme.gridColor} 1px, transparent 1px)
           `,
           backgroundSize: '40px 40px'
         }}
       ></div>
 
       {/* Coordinate HUD Labels */}
-      <div className="absolute top-2 left-3 text-[11px] font-mono text-cyan-400 font-bold pointer-events-none z-10 flex items-center gap-2">
-        <span className="w-2 h-2 bg-cyan-400"></span>
+      <div className={`absolute top-2 left-3 text-[11px] font-mono font-bold pointer-events-none z-10 flex items-center gap-2 ${
+        isLight ? 'text-slate-700' : 'text-cyan-400'
+      }`}>
+        <span className={`w-2 h-2 ${isLight ? 'bg-blue-600' : 'bg-cyan-400'}`}></span>
         <span>{t('gridHeader', lang)}</span>
       </div>
-      <div className="absolute top-2 right-4 text-[11px] font-mono text-emerald-400 font-bold pointer-events-none z-10 flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <div className={`absolute top-2 right-4 text-[11px] font-mono font-bold pointer-events-none z-10 flex items-center gap-1.5 ${
+        isLight ? 'text-emerald-800' : 'text-emerald-400'
+      }`}>
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
         <span>{t('supplyChainView', lang)}</span>
       </div>
 
@@ -48,31 +121,31 @@ export default function RetroWorldMap({
       >
         <defs>
           <linearGradient id="oceanRouteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#00f0ff" stopOpacity="0.95" />
-            <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#0284c7" stopOpacity="0.95" />
+            <stop offset="0%" stopColor={mapTheme.seaRouteGrad[0]} stopOpacity="0.95" />
+            <stop offset="50%" stopColor={mapTheme.seaRouteGrad[1]} stopOpacity="0.85" />
+            <stop offset="100%" stopColor={mapTheme.seaRouteGrad[2]} stopOpacity="0.95" />
           </linearGradient>
 
           <linearGradient id="inlandRouteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.95" />
-            <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#eab308" stopOpacity="0.95" />
+            <stop offset="0%" stopColor={mapTheme.inlandRouteGrad[0]} stopOpacity="0.95" />
+            <stop offset="50%" stopColor={mapTheme.inlandRouteGrad[1]} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={mapTheme.inlandRouteGrad[2]} stopOpacity="0.95" />
           </linearGradient>
 
           <linearGradient id="airRouteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#a855f7" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.9" />
+            <stop offset="0%" stopColor={mapTheme.airRouteGrad[0]} stopOpacity="0.9" />
+            <stop offset="50%" stopColor={mapTheme.airRouteGrad[1]} stopOpacity="0.8" />
+            <stop offset="100%" stopColor={mapTheme.airRouteGrad[2]} stopOpacity="0.9" />
           </linearGradient>
         </defs>
 
         {/* Deep Ocean Water Tint */}
-        <rect width="1600" height="700" fill="#08101e" />
+        <rect width="1600" height="700" fill={mapTheme.oceanFill} />
 
         {/* ======================================================== */}
         {/* 1. ASIAN MAINLAND (China, Russia/Siberia)                */}
         {/* ======================================================== */}
-        <g fill="#0e1728" stroke="#1e3350" strokeWidth="1.5">
+        <g fill={mapTheme.landFill} stroke={mapTheme.landStroke} strokeWidth="1.5">
           <path d="
             M -10,0 
             L 260,0 
@@ -94,11 +167,11 @@ export default function RetroWorldMap({
             L -10,700 Z
           " />
           {/* Shandong Peninsula */}
-          <path d="M 108,295 Q 140,308 135,328 L 115,335 Z" fill="#122036" />
+          <path d="M 108,295 Q 140,308 135,328 L 115,335 Z" fill={mapTheme.landFill} />
           {/* Taiwan */}
-          <path d="M 128,500 L 140,490 L 144,518 L 132,530 Z" fill="#122036" stroke="#223c60" strokeWidth="1.2" />
+          <path d="M 128,500 L 140,490 L 144,518 L 132,530 Z" fill={mapTheme.landFill} stroke={mapTheme.landStroke} strokeWidth="1.2" />
           {/* Kamchatka */}
-          <path d="M 400,110 L 450,100 L 470,160 L 440,190 L 425,140 Z" fill="#0f1a2c" stroke="#223c60" strokeWidth="1.2" />
+          <path d="M 400,110 L 450,100 L 470,160 L 440,190 L 425,140 Z" fill={mapTheme.landFill} stroke={mapTheme.landStroke} strokeWidth="1.2" />
         </g>
 
         {/* ======================================================== */}
@@ -120,26 +193,26 @@ export default function RetroWorldMap({
             L 180,325 
             L 168,302 
             L 164,280 Z
-          " fill="#1b3558" stroke="#00f0ff" strokeWidth="2.2" />
+          " fill={mapTheme.koreaFill} stroke={mapTheme.koreaStroke} strokeWidth="2.2" />
 
           {/* Gyeonggi Bay Incheon indentation */}
-          <path d="M 180,325 Q 174,325 172,335" stroke="#00f0ff" strokeWidth="1.5" fill="none" />
+          <path d="M 180,325 Q 174,325 172,335" stroke={mapTheme.koreaStroke} strokeWidth="1.5" fill="none" />
 
           {/* Jeju Island */}
-          <ellipse cx="180" cy="415" rx="9" ry="5.5" fill="#1b3558" stroke="#00f0ff" strokeWidth="1.5" />
+          <ellipse cx="180" cy="415" rx="9" ry="5.5" fill={mapTheme.koreaFill} stroke={mapTheme.koreaStroke} strokeWidth="1.5" />
           {/* Ulleungdo & Dokdo */}
-          <circle cx="238" cy="330" r="3" fill="#00f0ff" />
-          <circle cx="250" cy="334" r="2" fill="#00f0ff" />
+          <circle cx="238" cy="330" r="3" fill={mapTheme.koreaStroke} />
+          <circle cx="250" cy="334" r="2" fill={mapTheme.koreaStroke} />
 
           {/* Korean Country Label */}
-          <rect x="166" y="285" width="60" height="15" fill="#0c182a" rx="2" stroke="#00f0ff" strokeWidth="0.8" />
-          <text x="196" y="296" fill="#00f0ff" fontSize="9.5" fontFamily="sans-serif" fontWeight="900" textAnchor="middle">
+          <rect x="166" y="285" width="60" height="15" fill={mapTheme.koreaTextBg} rx="2" stroke={mapTheme.koreaStroke} strokeWidth="0.8" />
+          <text x="196" y="296" fill={mapTheme.koreaTextColor} fontSize="9.5" fontFamily="sans-serif" fontWeight="900" textAnchor="middle">
             대한민국
           </text>
-          <text x="235" y="360" fill="#38bdf8" fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity="0.8">
+          <text x="235" y="360" fill={mapTheme.seaLabelColor} fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity={isLight ? 0.95 : 0.8}>
             동해
           </text>
-          <text x="140" y="350" fill="#38bdf8" fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity="0.8">
+          <text x="140" y="350" fill={mapTheme.seaLabelColor} fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity={isLight ? 0.95 : 0.8}>
             서해(황해)
           </text>
         </g>
@@ -147,8 +220,8 @@ export default function RetroWorldMap({
         {/* ======================================================== */}
         {/* 3. JAPANESE ARCHIPELAGO                                  */}
         {/* ======================================================== */}
-        <g fill="#14243b" stroke="#26436b" strokeWidth="1.5">
-          <ellipse cx="235" cy="402" rx="3" ry="5" fill="#1b3558" stroke="#00f0ff" strokeWidth="1" />
+        <g fill={mapTheme.japanFill} stroke={mapTheme.japanStroke} strokeWidth="1.5">
+          <ellipse cx="235" cy="402" rx="3" ry="5" fill={mapTheme.japanFill} stroke={mapTheme.japanStroke} strokeWidth="1" />
           {/* Kyushu */}
           <path d="M 242,408 L 265,402 L 272,430 L 252,438 Z" />
           {/* Shikoku */}
@@ -158,17 +231,17 @@ export default function RetroWorldMap({
             M 262,390 
             L 292,385 
             L 322,378 
-            L 355,368 
-            L 372,338 
-            L 368,298 
-            L 356,308 
-            L 336,352 
-            L 302,368 
-            L 272,382 Z
+            L 350,360 
+            L 365,340 
+            L 362,305 
+            L 348,325 
+            L 322,352 
+            L 288,368 
+            L 262,378 Z
           " />
           {/* Hokkaido */}
           <path d="M 368,282 L 398,252 L 418,258 L 402,292 L 375,295 Z" />
-          <text x="315" y="395" fill="#94a3b8" fontSize="9" fontFamily="sans-serif" fontWeight="bold">
+          <text x="315" y="395" fill={mapTheme.japanTextColor} fontSize="9" fontFamily="sans-serif" fontWeight="bold">
             일본
           </text>
         </g>
@@ -176,12 +249,12 @@ export default function RetroWorldMap({
         {/* ======================================================== */}
         {/* 4. NORTH PACIFIC OCEAN FEATURES                          */}
         {/* ======================================================== */}
-        <g stroke="#1b304c" strokeWidth="1" fill="#152438">
+        <g stroke={mapTheme.landStroke} strokeWidth="1" fill={mapTheme.landFill}>
           {/* Hawaiian Islands */}
-          <ellipse cx="680" cy="455" rx="5" ry="3" fill="#1d3554" stroke="#38bdf8" />
-          <ellipse cx="700" cy="462" rx="6" ry="3.5" fill="#1d3554" stroke="#38bdf8" />
-          <ellipse cx="720" cy="470" rx="7" ry="4.5" fill="#1d3554" stroke="#38bdf8" />
-          <text x="735" y="475" fill="#38bdf8" fontSize="10" fontFamily="monospace" fontWeight="bold">
+          <ellipse cx="680" cy="455" rx="5" ry="3" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
+          <ellipse cx="700" cy="462" rx="6" ry="3.5" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
+          <ellipse cx="720" cy="470" rx="7" ry="4.5" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
+          <text x="735" y="475" fill={mapTheme.seaLabelColor} fontSize="10" fontFamily="monospace" fontWeight="bold">
             HAWAII
           </text>
 
@@ -198,7 +271,7 @@ export default function RetroWorldMap({
         {/* 5. NORTH AMERICA (CANADA & UNITED STATES FULL CONTINENT) */}
         {/* Shifted UPWARDS by 120px to provide ample space above HUD */}
         {/* ======================================================== */}
-        <g id="north-america-continent" transform="translate(0, -120)" fill="#101c30" stroke="#294875" strokeWidth="1.5">
+        <g id="north-america-continent" transform="translate(0, -120)" fill={mapTheme.usFill} stroke={mapTheme.usStroke} strokeWidth="1.5">
           {/* Alaska & North Pacific Coast */}
           <path d="
             M 890,165 
@@ -238,20 +311,20 @@ export default function RetroWorldMap({
           " />
 
           {/* Baja California (Mexico) */}
-          <path d="M 1175,420 L 1205,500 L 1212,525 L 1198,515 L 1182,450 Z" fill="#0c1626" stroke="#223c60" />
+          <path d="M 1175,420 L 1205,500 L 1212,525 L 1198,515 L 1182,450 Z" fill={mapTheme.landFill} stroke={mapTheme.landStroke} />
 
           {/* GREAT LAKES (Superior, Michigan, Huron, Erie) - Shifted with US continent */}
           {/* Lake Superior */}
-          <ellipse cx="1355" cy="215" rx="30" ry="12" fill="#08101e" stroke="#1e385c" strokeWidth="1.2" />
+          <ellipse cx="1355" cy="215" rx="30" ry="12" fill={mapTheme.greatLakesFill} stroke={mapTheme.greatLakesStroke} strokeWidth="1.2" />
           {/* Lake Michigan (North-South elongation to Chicago) */}
-          <path d="M 1385,225 Q 1393,250 1395,275 Q 1383,275 1378,245 Z" fill="#08101e" stroke="#1e385c" strokeWidth="1.2" />
+          <path d="M 1385,225 Q 1393,250 1395,275 Q 1383,275 1378,245 Z" fill={mapTheme.greatLakesFill} stroke={mapTheme.greatLakesStroke} strokeWidth="1.2" />
           {/* Lake Huron */}
-          <ellipse cx="1425" cy="235" rx="18" ry="15" fill="#08101e" stroke="#1e385c" strokeWidth="1.2" />
+          <ellipse cx="1425" cy="235" rx="18" ry="15" fill={mapTheme.greatLakesFill} stroke={mapTheme.greatLakesStroke} strokeWidth="1.2" />
           {/* Lake Erie */}
-          <ellipse cx="1460" cy="265" rx="20" ry="8" fill="#08101e" stroke="#1e385c" strokeWidth="1.2" />
+          <ellipse cx="1465" cy="265" rx="20" ry="8" fill={mapTheme.greatLakesFill} stroke={mapTheme.greatLakesStroke} strokeWidth="1.2" />
 
-          {/* US State Borders shifted eastward */}
-          <g stroke="#1e3555" strokeWidth="1" strokeDasharray="2 2">
+          {/* Key State Border Guidelines (Western corridor) */}
+          <g stroke={isLight ? '#d8d4cc' : '#182b45'} strokeWidth="1" strokeDasharray="3 3">
             <line x1="1138" y1="235" x2="1225" y2="235" />
             <line x1="1135" y1="275" x2="1225" y2="275" />
             <line x1="1225" y1="275" x2="1225" y2="330" />
@@ -262,16 +335,16 @@ export default function RetroWorldMap({
           </g>
 
           {/* Country & Regional Labels */}
-          <text x="1200" y="440" fill="#2d527c" fontSize="12" fontFamily="sans-serif" fontWeight="bold">
+          <text x="1200" y="440" fill={isLight ? '#475569' : '#2d527c'} fontSize="12" fontFamily="sans-serif" fontWeight="bold">
             {t('usaMainland', lang)}
           </text>
-          <text x="1425" y="225" fill="#3b6394" fontSize="9" fontFamily="sans-serif" fontWeight="bold">
+          <text x="1425" y="225" fill={isLight ? '#546e7a' : '#3b6394'} fontSize="9" fontFamily="sans-serif" fontWeight="bold">
             {t('greatLakes', lang)}
           </text>
         </g>
 
         {/* Tactical Longitude Grid Lines */}
-        <g stroke="#112238" strokeWidth="1" strokeDasharray="3 3">
+        <g stroke={isLight ? 'rgba(70, 130, 180, 0.2)' : '#112238'} strokeWidth="1" strokeDasharray="3 3">
           <line x1="0" y1="180" x2="1600" y2="180" />
           <line x1="0" y1="350" x2="1600" y2="350" />
           <line x1="0" y1="520" x2="1600" y2="520" />
@@ -281,7 +354,7 @@ export default function RetroWorldMap({
           <line x1="1450" y1="0" x2="1450" y2="700" />
         </g>
 
-        <text x="580" y="370" fill="#182d47" fontSize="24" fontFamily="monospace" fontWeight="900" letterSpacing="8">
+        <text x="580" y="370" fill={isLight ? '#546e7a' : '#182d47'} fontSize="24" fontFamily="monospace" fontWeight="900" letterSpacing="8" opacity={isLight ? 0.7 : 1}>
           {t('pacificOcean', lang)}
         </text>
 
@@ -294,15 +367,15 @@ export default function RetroWorldMap({
           <path 
             d={ROUTE_PATHS.SEA_PACIFIC} 
             fill="none" 
-            stroke="#00f0ff" 
-            strokeWidth="3.5" 
-            strokeOpacity="0.15" 
+            stroke={mapTheme.seaRouteStroke} 
+            strokeWidth={isLight ? "4" : "3.5"} 
+            strokeOpacity={isLight ? "0.35" : "0.15"} 
           />
           <path 
             d={ROUTE_PATHS.SEA_PACIFIC} 
             fill="none" 
             stroke="url(#oceanRouteGrad)" 
-            strokeWidth="2.2" 
+            strokeWidth={isLight ? "2.6" : "2.2"} 
             strokeDasharray="6 4" 
           />
         </g>
@@ -312,15 +385,15 @@ export default function RetroWorldMap({
           <path 
             d={ROUTE_PATHS.INLAND_RAIL} 
             fill="none" 
-            stroke="#10b981" 
-            strokeWidth="4" 
-            strokeOpacity="0.25" 
+            stroke={mapTheme.inlandRouteStroke} 
+            strokeWidth={isLight ? "5" : "4"} 
+            strokeOpacity={isLight ? "0.4" : "0.25"} 
           />
           <path 
             d={ROUTE_PATHS.INLAND_RAIL} 
             fill="none" 
             stroke="url(#inlandRouteGrad)" 
-            strokeWidth="2.4" 
+            strokeWidth={isLight ? "2.6" : "2.4"} 
             strokeDasharray="5 3" 
           />
         </g>
@@ -330,27 +403,54 @@ export default function RetroWorldMap({
           <path 
             d={ROUTE_PATHS.AIR_FLIGHT} 
             fill="none" 
-            stroke="#38bdf8" 
-            strokeWidth="2.5" 
-            strokeOpacity="0.2" 
+            stroke={mapTheme.airRouteStroke} 
+            strokeWidth={isLight ? "3.5" : "2.5"} 
+            strokeOpacity={isLight ? "0.35" : "0.2"} 
           />
           <path 
             d={ROUTE_PATHS.AIR_FLIGHT} 
             fill="none" 
             stroke="url(#airRouteGrad)" 
-            strokeWidth="1.5" 
+            strokeWidth={isLight ? "1.8" : "1.5"} 
             strokeDasharray="4 5" 
           />
         </g>
 
-        {/* Guidance Text */}
-        <text x="560" y="340" fill="#00f0ff" opacity="0.85" fontSize="11" fontFamily="monospace" fontWeight="bold">
+        {/* Guidance Text with contrast halo */}
+        <text 
+          x="560" 
+          y="340" 
+          fill={mapTheme.seaRouteText} 
+          opacity={isLight ? 1 : 0.85} 
+          fontSize="11" 
+          fontFamily="monospace" 
+          fontWeight="bold"
+          style={{ textShadow: isLight ? '0 0 4px #ffffff, 0 0 2px #ffffff, 0 1px 2px rgba(255,255,255,0.9)' : 'none' }}
+        >
           {t('routeSea', lang)}
         </text>
-        <text x="560" y="125" fill="#38bdf8" opacity="0.85" fontSize="11" fontFamily="monospace" fontWeight="bold">
+        <text 
+          x="560" 
+          y="125" 
+          fill={mapTheme.airRouteText} 
+          opacity={isLight ? 1 : 0.85} 
+          fontSize="11" 
+          fontFamily="monospace" 
+          fontWeight="bold"
+          style={{ textShadow: isLight ? '0 0 4px #ffffff, 0 0 2px #ffffff, 0 1px 2px rgba(255,255,255,0.9)' : 'none' }}
+        >
           {t('routeAir', lang)}
         </text>
-        <text x="1115" y="265" fill="#10b981" opacity="0.95" fontSize="10.5" fontFamily="monospace" fontWeight="bold">
+        <text 
+          x="1115" 
+          y="265" 
+          fill={mapTheme.inlandRouteText} 
+          opacity={isLight ? 1 : 0.95} 
+          fontSize="10.5" 
+          fontFamily="monospace" 
+          fontWeight="bold"
+          style={{ textShadow: isLight ? '0 0 4px #ffffff, 0 0 2px #ffffff, 0 1px 2px rgba(255,255,255,0.9)' : 'none' }}
+        >
           {t('routeRail', lang)}
         </text>
       </svg>
@@ -368,6 +468,7 @@ export default function RetroWorldMap({
               position={pos}
               onSelectShipment={onSelectShipment}
               lang={lang}
+              themeMode={themeMode}
             />
           );
         })}
@@ -386,26 +487,37 @@ export default function RetroWorldMap({
           lang={lang}
           showPhotos={showPhotos}
           commanderPhotos={commanderPhotos}
+          themeMode={themeMode}
         />
       </div>
 
       {/* Map Legend at Bottom Left */}
-      <div className="absolute bottom-3 left-3 bg-[#0a111e]/95 border border-slate-700 p-2.5 rounded font-mono text-[11px] text-slate-200 space-y-1 backdrop-blur-sm z-20 shadow-lg">
-        <div className="font-bold text-cyan-400 border-b border-slate-700 pb-1 flex items-center gap-1.5">
-          <span className="w-2 h-2 bg-cyan-400 inline-block"></span>
+      <div className={`absolute bottom-3 left-3 p-2.5 rounded font-mono text-[11px] space-y-1.5 backdrop-blur-sm z-20 shadow-lg border ${
+        isLight ? 'bg-white/95 border-slate-300 text-slate-800' : 'bg-[#0a111e]/95 border-slate-700 text-slate-200'
+      }`}>
+        <div className={`font-bold border-b pb-1 flex items-center gap-1.5 ${
+          isLight ? 'text-slate-900 border-slate-200' : 'text-cyan-400 border-slate-700'
+        }`}>
+          <span className={`w-2 h-2 inline-block ${isLight ? 'bg-blue-600' : 'bg-cyan-400'}`}></span>
           <span>{lang === 'en' ? 'Logistics Transport Mode Legend' : '물류 운송 모드 범례'}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3.5 h-0.5 bg-cyan-400 inline-block"></span>
-          <span>{lang === 'en' ? 'Maritime Highway (Yellow Sea ➔ Pacific ➔ Long Beach)' : '해상 운송로 (황해 ➔ 대한해협 ➔ 태평양 ➔ 롱비치)'}</span>
+          <span className="w-4 h-1 bg-blue-600 inline-block rounded-full"></span>
+          <span className={isLight ? 'text-slate-800 font-medium' : 'text-slate-300'}>
+            {lang === 'en' ? 'Maritime Highway (Yellow Sea ➔ Pacific ➔ Long Beach)' : '해상 운송로 (황해 ➔ 대한해협 ➔ 태평양 ➔ 롱비치)'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3.5 h-0.5 bg-sky-400 inline-block border-t border-dotted"></span>
-          <span>{lang === 'en' ? 'Air Cargo Route (Incheon ➔ ORD Chicago ➔ Kokomo)' : '항공 운송로 (인천 ➔ 시카고 ➔ 코코모)'}</span>
+          <span className="w-4 h-1 bg-indigo-600 inline-block rounded-full"></span>
+          <span className={isLight ? 'text-slate-800 font-medium' : 'text-slate-300'}>
+            {lang === 'en' ? 'Air Cargo Route (Incheon ➔ ORD Chicago ➔ Kokomo)' : '항공 운송로 (인천 ➔ 시카고 ➔ 코코모)'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3.5 h-0.5 bg-emerald-400 inline-block"></span>
-          <span>{lang === 'en' ? 'US Inland Freight Rail (Long Beach Port ➔ Kokomo Facility)' : '미 내륙 화물철도 (롱비치항 ➔ 코코모 법인 종점)'}</span>
+          <span className="w-4 h-1 bg-emerald-600 inline-block rounded-full"></span>
+          <span className={isLight ? 'text-slate-800 font-medium' : 'text-slate-300'}>
+            {lang === 'en' ? 'US Inland Freight Rail (Long Beach Port ➔ Kokomo Facility)' : '미 내륙 화물철도 (롱비치항 ➔ 코코모 법인 종점)'}
+          </span>
         </div>
       </div>
 

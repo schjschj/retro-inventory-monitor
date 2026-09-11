@@ -29,8 +29,10 @@ export default function InventorySummaryHud({
   setIncludedCategories,
   lang = 'ko',
   simTime,
-  selectedProduct = 'ESS8-1'
+  selectedProduct = 'ESS8-1',
+  themeMode = 'dark'
 }) {
+  const isLight = themeMode === 'light';
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Free custom position: { x, y }
   const [customPos, setCustomPos] = useState(null);
@@ -162,22 +164,30 @@ export default function InventorySummaryHud({
         right: '24px',
         zIndex: 35
       }}
-      className={`font-mono shadow-2xl select-none w-80 md:w-84 ${isDragging ? 'opacity-90 ring-2 ring-cyan-400 cursor-grabbing' : ''}`}
+      className={`font-mono shadow-2xl select-none w-80 md:w-84 ${isDragging ? (isLight ? 'opacity-90 ring-2 ring-blue-500 cursor-grabbing' : 'opacity-90 ring-2 ring-cyan-400 cursor-grabbing') : ''}`}
     >
-      <div className="pixel-box bg-[#09101d] border-2 border-cyan-400">
+      <div className={`pixel-box border-2 rounded-sm overflow-hidden ${
+        isLight ? 'bg-white border-slate-300 shadow-xl' : 'bg-[#09101d] border-cyan-400'
+      }`}>
         
         {/* HUD Header - Draggable anywhere */}
         <div 
           onMouseDown={handleMouseDown}
-          className="bg-[#121f36] px-3 py-2 border-b border-cyan-500/50 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+          className={`px-3 py-2 border-b flex items-center justify-between cursor-grab active:cursor-grabbing select-none ${
+            isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#121f36] border-cyan-500/50'
+          }`}
           title={t('dragToMove', lang)}
         >
           <div className="flex items-center gap-1.5">
-            <Move className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs font-black text-cyan-300 tracking-wider">
+            <Move className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-cyan-400'}`} />
+            <span className={`text-xs font-black tracking-wider ${isLight ? 'text-slate-900' : 'text-cyan-300'}`}>
               {t('hudTitle', lang)}
             </span>
-            <span className="text-[9px] text-cyan-300 font-bold bg-cyan-950 px-1.5 py-0.2 border border-cyan-400 rounded">
+            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+              isLight 
+                ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                : 'bg-cyan-950 text-cyan-300 border-cyan-400'
+            }`}>
               {selectedProduct === 'ALL' ? (lang === 'ko' ? '전체 품목' : 'ALL') : selectedProduct}
             </span>
           </div>
@@ -186,7 +196,9 @@ export default function InventorySummaryHud({
             {customPos && (
               <button
                 onClick={handleResetPosition}
-                className="p-1 hover:bg-[#1f314f] text-slate-400 hover:text-cyan-300 rounded text-[10px]"
+                className={`p-1 rounded text-[10px] ${
+                  isLight ? 'hover:bg-slate-200 text-slate-500 hover:text-slate-800' : 'hover:bg-[#1f314f] text-slate-400 hover:text-cyan-300'
+                }`}
                 title={t('resetPosTooltip', lang)}
               >
                 <RotateCcw className="w-3 h-3" />
@@ -198,7 +210,9 @@ export default function InventorySummaryHud({
                 sound.playClick();
                 setIsCollapsed(!isCollapsed);
               }}
-              className="p-1 hover:bg-[#1f314f] text-slate-300 hover:text-white rounded"
+              className={`p-1 rounded ${
+                isLight ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-[#1f314f] text-slate-300 hover:text-white'
+              }`}
               title={isCollapsed ? "Expand" : "Collapse"}
             >
               {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -209,7 +223,9 @@ export default function InventorySummaryHud({
                 sound.playClick();
                 onToggleVisibility();
               }}
-              className="p-1 hover:bg-[#1f314f] text-slate-400 hover:text-rose-400 rounded"
+              className={`p-1 rounded ${
+                isLight ? 'hover:bg-slate-200 text-slate-400 hover:text-rose-600' : 'hover:bg-[#1f314f] text-slate-400 hover:text-rose-400'
+              }`}
               title="Hide HUD"
             >
               <EyeOff className="w-4 h-4" />
@@ -219,10 +235,14 @@ export default function InventorySummaryHud({
 
         {/* Collapsed State */}
         {isCollapsed ? (
-          <div className="p-2.5 flex items-center justify-between text-xs bg-[#0b1322]">
-            <span className="text-slate-300 text-[11px] font-bold">{t('grandTotalTitle', lang)}:</span>
-            <span className="text-amber-300 font-bold text-sm">
-              {grandTotal.toLocaleString()} <span className="text-[10px] text-slate-400">EA</span>
+          <div className={`p-2.5 flex items-center justify-between text-xs ${
+            isLight ? 'bg-slate-50' : 'bg-[#0b1322]'
+          }`}>
+            <span className={`text-[11px] font-bold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+              {t('grandTotalTitle', lang)}:
+            </span>
+            <span className={`font-black text-sm ${isLight ? 'text-blue-700' : 'text-amber-300'}`}>
+              {grandTotal.toLocaleString()} <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>EA</span>
             </span>
           </div>
         ) : (
@@ -230,37 +250,53 @@ export default function InventorySummaryHud({
           <div className="p-3 text-xs space-y-2">
             
             {/* Grand Total Box (Sums only checked items) */}
-            <div className="bg-[#0e243d] p-2 border border-cyan-400 flex items-center justify-between shadow-md">
+            <div className={`p-2 border flex items-center justify-between shadow-sm rounded-sm ${
+              isLight ? 'bg-blue-50/80 border-blue-300' : 'bg-[#0e243d] border-cyan-400 shadow-md'
+            }`}>
               <div>
-                <div className="text-[10px] text-cyan-300 font-black uppercase tracking-wider">
+                <div className={`text-[10px] font-black uppercase tracking-wider ${
+                  isLight ? 'text-blue-900' : 'text-cyan-300'
+                }`}>
                   {t('grandTotalTitle', lang)}
                 </div>
-                <div className="text-[10px] text-slate-300 font-semibold">
+                <div className={`text-[10px] font-semibold ${
+                  isLight ? 'text-slate-600' : 'text-slate-300'
+                }`}>
                   {t('grandTotalSubtitle', lang)}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-base font-black text-amber-300 tracking-wider">
+                <div className={`text-base font-black tracking-wider ${
+                  isLight ? 'text-blue-700' : 'text-amber-300'
+                }`}>
                   {grandTotal.toLocaleString()}
                 </div>
-                <div className="text-[9px] text-slate-300 font-bold">{t('unitEa', lang)}</div>
+                <div className={`text-[9px] font-bold ${
+                  isLight ? 'text-slate-600' : 'text-slate-300'
+                }`}>{t('unitEa', lang)}</div>
               </div>
             </div>
 
             {/* Select All / Deselect All Controls */}
-            <div className="flex items-center justify-between text-[11px] px-1 text-slate-400 border-b border-slate-800 pb-1">
+            <div className={`flex items-center justify-between text-[11px] px-1 pb-1 border-b ${
+              isLight ? 'text-slate-600 border-slate-200' : 'text-slate-400 border-slate-800'
+            }`}>
               <span>{t('selectionFilter', lang)}:</span>
               <div className="space-x-2">
                 <button
                   onClick={() => handleSelectAll(true)}
-                  className="text-cyan-400 hover:text-cyan-200 font-bold underline"
+                  className={`font-bold underline ${
+                    isLight ? 'text-blue-600 hover:text-blue-800' : 'text-cyan-400 hover:text-cyan-200'
+                  }`}
                 >
                   {t('selectAll', lang)}
                 </button>
                 <span>|</span>
                 <button
                   onClick={() => handleSelectAll(false)}
-                  className="text-slate-400 hover:text-slate-200 underline"
+                  className={`underline ${
+                    isLight ? 'text-slate-500 hover:text-slate-800' : 'text-slate-400 hover:text-slate-200'
+                  }`}
                 >
                   {t('deselectAll', lang)}
                 </button>
@@ -276,32 +312,36 @@ export default function InventorySummaryHud({
                   sound.playClick();
                   setActiveFilter(activeFilter === 'INCHEON' ? null : 'INCHEON');
                 }}
-                className={`p-1.5 border transition-all cursor-pointer ${
+                className={`p-1.5 border transition-all cursor-pointer rounded-sm ${
                   !includedCategories.incheon
-                    ? 'opacity-40 bg-[#080d16] border-slate-800'
+                    ? isLight ? 'opacity-40 bg-slate-100 border-slate-200' : 'opacity-40 bg-[#080d16] border-slate-800'
                     : activeFilter === 'INCHEON' 
-                    ? 'bg-cyan-950/80 border-cyan-400' 
-                    : 'bg-[#0e1726] border-slate-700 hover:border-cyan-500'
+                    ? isLight ? 'bg-blue-100 border-blue-600 shadow-sm' : 'bg-cyan-950/80 border-cyan-400' 
+                    : isLight ? 'bg-slate-50 border-slate-200 hover:border-blue-400' : 'bg-[#0e1726] border-slate-700 hover:border-cyan-500'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => toggleCategory('incheon', e)}
-                      className="text-cyan-400 hover:text-cyan-200"
+                      className={isLight ? 'text-blue-600 hover:text-blue-800' : 'text-cyan-400 hover:text-cyan-200'}
                     >
                       {includedCategories.incheon ? (
-                        <CheckSquare className="w-4 h-4 fill-cyan-950 text-cyan-400" />
+                        <CheckSquare className={`w-4 h-4 ${isLight ? 'fill-blue-100 text-blue-600' : 'fill-cyan-950 text-cyan-400'}`} />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
+                        <Square className={`w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
                       )}
                     </button>
-                    <div className="flex items-center gap-1.5 font-bold text-slate-100">
-                      <Factory className="w-3.5 h-3.5 text-cyan-400" />
+                    <div className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                      <Factory className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-cyan-400'}`} />
                       <span>{t('hudItem1', lang)}</span>
                     </div>
                   </div>
-                  <span className={`font-bold ${includedCategories.incheon ? 'text-white' : 'text-slate-500 line-through'}`}>
+                  <span className={`font-black ${
+                    includedCategories.incheon 
+                      ? isLight ? 'text-blue-900' : 'text-white' 
+                      : isLight ? 'text-slate-400 line-through' : 'text-slate-500 line-through'
+                  }`}>
                     {incheonTotal.toLocaleString()} EA
                   </span>
                 </div>
@@ -313,47 +353,55 @@ export default function InventorySummaryHud({
                   sound.playClick();
                   setActiveFilter(activeFilter === 'TRANSIT' ? null : 'TRANSIT');
                 }}
-                className={`p-1.5 border transition-all cursor-pointer ${
+                className={`p-1.5 border transition-all cursor-pointer rounded-sm ${
                   !includedCategories.transit
-                    ? 'opacity-40 bg-[#080d16] border-slate-800'
+                    ? isLight ? 'opacity-40 bg-slate-100 border-slate-200' : 'opacity-40 bg-[#080d16] border-slate-800'
                     : activeFilter === 'TRANSIT' 
-                    ? 'bg-cyan-950/80 border-cyan-400' 
-                    : 'bg-[#0e1726] border-slate-700 hover:border-cyan-500'
+                    ? isLight ? 'bg-sky-100 border-sky-600 shadow-sm' : 'bg-cyan-950/80 border-cyan-400' 
+                    : isLight ? 'bg-slate-50 border-slate-200 hover:border-sky-400' : 'bg-[#0e1726] border-slate-700 hover:border-cyan-500'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => toggleCategory('transit', e)}
-                      className="text-cyan-400 hover:text-cyan-200"
+                      className={isLight ? 'text-sky-600 hover:text-sky-800' : 'text-cyan-400 hover:text-cyan-200'}
                     >
                       {includedCategories.transit ? (
-                        <CheckSquare className="w-4 h-4 fill-cyan-950 text-cyan-400" />
+                        <CheckSquare className={`w-4 h-4 ${isLight ? 'fill-sky-100 text-sky-600' : 'fill-cyan-950 text-cyan-400'}`} />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
+                        <Square className={`w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
                       )}
                     </button>
-                    <div className="flex items-center gap-1.5 font-bold text-slate-100">
-                      <Ship className="w-3.5 h-3.5 text-sky-400" />
+                    <div className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                      <Ship className={`w-3.5 h-3.5 ${isLight ? 'text-sky-600' : 'text-sky-400'}`} />
                       <span>{t('hudItem2', lang)}</span>
                     </div>
                   </div>
-                  <span className={`font-bold ${includedCategories.transit ? 'text-sky-300' : 'text-slate-500 line-through'}`}>
+                  <span className={`font-black ${
+                    includedCategories.transit 
+                      ? isLight ? 'text-sky-800' : 'text-sky-300' 
+                      : isLight ? 'text-slate-400 line-through' : 'text-slate-500 line-through'
+                  }`}>
                     {transitTotal.toLocaleString()} EA
                   </span>
                 </div>
                 {includedCategories.transit && (
-                  <div className="text-[9px] text-slate-400 pl-6 flex flex-col gap-0.5 pt-0.5 border-t border-slate-800/60 mt-1">
+                  <div className={`text-[9px] pl-6 flex flex-col gap-0.5 pt-0.5 border-t mt-1 ${
+                    isLight ? 'text-slate-600 border-slate-200' : 'text-slate-400 border-slate-800/60'
+                  }`}>
                     <div className="flex justify-between items-center">
                       <span>해상/항공 운송중: {activeTransitShipments.length}건</span>
                       {pendingShipments.length > 0 && (
-                        <span className="text-amber-400 font-bold">
+                        <span className={`font-bold ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
                           (출항대기 {pendingShipments.length}건 제외)
                         </span>
                       )}
                     </div>
                     {arrivedShipments.length > 0 && (
-                      <span className="text-emerald-400 font-mono">코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)</span>
+                      <span className={`font-mono ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
+                        코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)
+                      </span>
                     )}
                   </div>
                 )}
@@ -365,39 +413,45 @@ export default function InventorySummaryHud({
                   sound.playClick();
                   setActiveFilter(activeFilter === 'KOKOMO' ? null : 'KOKOMO');
                 }}
-                className={`p-1.5 border transition-all cursor-pointer ${
+                className={`p-1.5 border transition-all cursor-pointer rounded-sm ${
                   !includedCategories.kokomo
-                    ? 'opacity-40 bg-[#080d16] border-slate-800'
+                    ? isLight ? 'opacity-40 bg-slate-100 border-slate-200' : 'opacity-40 bg-[#080d16] border-slate-800'
                     : activeFilter === 'KOKOMO' 
-                    ? 'bg-amber-950/60 border-amber-400' 
-                    : 'bg-[#0e1726] border-slate-700 hover:border-amber-500'
+                    ? isLight ? 'bg-amber-100 border-amber-600 shadow-sm' : 'bg-amber-950/60 border-amber-400' 
+                    : isLight ? 'bg-slate-50 border-slate-200 hover:border-amber-400' : 'bg-[#0e1726] border-slate-700 hover:border-amber-500'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => toggleCategory('kokomo', e)}
-                      className="text-amber-400 hover:text-amber-200"
+                      className={isLight ? 'text-amber-600 hover:text-amber-800' : 'text-amber-400 hover:text-amber-200'}
                     >
                       {includedCategories.kokomo ? (
-                        <CheckSquare className="w-4 h-4 fill-amber-950 text-amber-400" />
+                        <CheckSquare className={`w-4 h-4 ${isLight ? 'fill-amber-100 text-amber-600' : 'fill-amber-950 text-amber-400'}`} />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
+                        <Square className={`w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
                       )}
                     </button>
-                    <div className="flex items-center gap-1.5 font-bold text-slate-100">
-                      <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                    <div className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                      <Building2 className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                       <span>{t('hudItem3', lang)}</span>
                     </div>
                   </div>
-                  <span className={`font-bold ${includedCategories.kokomo ? 'text-amber-300' : 'text-slate-500 line-through'}`}>
+                  <span className={`font-black ${
+                    includedCategories.kokomo 
+                      ? isLight ? 'text-amber-800' : 'text-amber-300' 
+                      : isLight ? 'text-slate-400 line-through' : 'text-slate-500 line-through'
+                  }`}>
                     {kokomoTotal.toLocaleString()} EA
                   </span>
                 </div>
                 {arrivedTotal > 0 && includedCategories.kokomo && (
-                  <div className="text-[9px] text-amber-400/90 pl-6 flex justify-between pt-0.5 border-t border-amber-900/40 mt-1 font-mono">
+                  <div className={`text-[9px] pl-6 flex justify-between pt-0.5 border-t mt-1 font-mono ${
+                    isLight ? 'text-amber-800 border-amber-200' : 'text-amber-400/90 border-amber-900/40'
+                  }`}>
                     <span>기본: {((Number(kokomoInventory.baseTotal) || (kokomoTotal - arrivedTotal))).toLocaleString()} EA</span>
-                    <span className="text-emerald-400 font-bold">+철송입고: +{arrivedTotal.toLocaleString()} EA</span>
+                    <span className={`font-bold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>+철송입고: +{arrivedTotal.toLocaleString()} EA</span>
                   </div>
                 )}
               </div>
@@ -408,32 +462,36 @@ export default function InventorySummaryHud({
                   sound.playClick();
                   setActiveFilter(activeFilter === 'SPE' ? null : 'SPE');
                 }}
-                className={`p-1.5 border transition-all cursor-pointer ${
+                className={`p-1.5 border transition-all cursor-pointer rounded-sm ${
                   !includedCategories.spe
-                    ? 'opacity-40 bg-[#080d16] border-slate-800'
+                    ? isLight ? 'opacity-40 bg-slate-100 border-slate-200' : 'opacity-40 bg-[#080d16] border-slate-800'
                     : activeFilter === 'SPE' 
-                    ? 'bg-emerald-950/60 border-emerald-400' 
-                    : 'bg-[#0e1726] border-slate-700 hover:border-emerald-500'
+                    ? isLight ? 'bg-emerald-100 border-emerald-600 shadow-sm' : 'bg-emerald-950/60 border-emerald-400' 
+                    : isLight ? 'bg-slate-50 border-slate-200 hover:border-emerald-400' : 'bg-[#0e1726] border-slate-700 hover:border-emerald-500'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => toggleCategory('spe', e)}
-                      className="text-emerald-400 hover:text-emerald-200"
+                      className={isLight ? 'text-emerald-600 hover:text-emerald-800' : 'text-emerald-400 hover:text-emerald-200'}
                     >
                       {includedCategories.spe ? (
-                        <CheckSquare className="w-4 h-4 fill-emerald-950 text-emerald-400" />
+                        <CheckSquare className={`w-4 h-4 ${isLight ? 'fill-emerald-100 text-emerald-600' : 'fill-emerald-950 text-emerald-400'}`} />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
+                        <Square className={`w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
                       )}
                     </button>
-                    <div className="flex items-center gap-1.5 font-bold text-slate-100">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <div className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                      <ShieldCheck className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                       <span>{t('hudItem4', lang)}</span>
                     </div>
                   </div>
-                  <span className={`font-bold ${includedCategories.spe ? 'text-emerald-300' : 'text-slate-500 line-through'}`}>
+                  <span className={`font-black ${
+                    includedCategories.spe 
+                      ? isLight ? 'text-emerald-800' : 'text-emerald-300' 
+                      : isLight ? 'text-slate-400 line-through' : 'text-slate-500 line-through'
+                  }`}>
                     {speTotal.toLocaleString()} EA
                   </span>
                 </div>
@@ -441,7 +499,9 @@ export default function InventorySummaryHud({
 
             </div>
 
-            <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-bold">
+            <div className={`pt-1.5 border-t flex items-center justify-between text-[10px] font-bold ${
+              isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-400'
+            }`}>
               <span>{t('hudHint', lang)}</span>
               {activeFilter && (
                 <button
@@ -449,7 +509,7 @@ export default function InventorySummaryHud({
                     e.stopPropagation();
                     setActiveFilter(null);
                   }}
-                  className="text-cyan-400 underline"
+                  className={`underline font-bold ${isLight ? 'text-blue-600' : 'text-cyan-400'}`}
                 >
                   {t('focusRelease', lang)}
                 </button>
