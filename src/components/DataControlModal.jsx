@@ -62,6 +62,7 @@ export default function DataControlModal({
   selectedProduct = 'ESS8-1',
   themeMode = 'dark'
 }) {
+  const isLight = themeMode === 'light';
   const [activeTab, setActiveTab] = useState('INCHEON');
   const [uploadMessage, setUploadMessage] = useState(null);
 
@@ -785,12 +786,18 @@ export default function DataControlModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm font-mono animate-fadeIn">
-      <div className="pixel-box bg-[#0c1322] border-2 border-cyan-400 w-full max-w-5xl xl:max-w-[1100px] max-h-[92vh] flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.4)]">
+      <div className={`pixel-box w-full max-w-5xl xl:max-w-[1100px] max-h-[92vh] flex flex-col ${
+        isLight
+          ? 'bg-white border-2 border-slate-300 shadow-2xl text-slate-900'
+          : 'bg-[#0c1322] border-2 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.4)] text-white'
+      }`}>
         
-        <div className="bg-[#131f35] px-4 py-3 border-b border-cyan-500/50 flex items-center justify-between">
+        <div className={`px-4 py-3 border-b flex items-center justify-between ${
+          isLight ? 'bg-slate-100 border-slate-200 text-slate-900' : 'bg-[#131f35] border-cyan-500/50 text-cyan-300'
+        }`}>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-cyan-400 animate-pulse"></span>
-            <h2 className="text-sm md:text-base font-bold text-cyan-300">
+            <span className={`w-2.5 h-2.5 rounded-full ${isLight ? 'bg-sky-500' : 'bg-cyan-400 animate-pulse'}`}></span>
+            <h2 className={`text-sm md:text-base font-bold ${isLight ? 'text-slate-900' : 'text-cyan-300'}`}>
               {lang === 'en' 
                 ? '[DATA CONTROL CENTER] Inventory & Logistics Management (Unit: EA)' 
                 : '[데이터 통제 센터] 재고 관리 & 물류 통제 (단위: EA)'}
@@ -802,7 +809,7 @@ export default function DataControlModal({
                 sound.playClick();
                 onClose();
               }}
-              className="p-1 hover:bg-[#203352] text-slate-400 hover:text-white rounded"
+              className={`p-1 rounded transition-colors ${isLight ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-[#203352] text-slate-400 hover:text-white'}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -813,16 +820,20 @@ export default function DataControlModal({
         {uploadMessage && (
           <div className={`px-4 py-2 text-xs font-bold flex items-center justify-between border-b ${
             uploadMessage.type === 'success' 
-              ? 'bg-emerald-950 border-emerald-500 text-emerald-200 shadow-inner' 
-              : 'bg-rose-950 border-rose-500 text-rose-200'
+              ? isLight
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                : 'bg-emerald-950 border-emerald-500 text-emerald-200 shadow-inner' 
+              : isLight
+                ? 'bg-rose-50 border-rose-300 text-rose-900'
+                : 'bg-rose-950 border-rose-500 text-rose-200'
           }`}>
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
               <span>{uploadMessage.text}</span>
             </div>
             <button 
               onClick={() => setUploadMessage(null)}
-              className="text-slate-400 hover:text-white text-[11px] underline ml-2"
+              className={`text-[11px] underline ml-2 ${isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}
             >
               닫기
             </button>
@@ -832,17 +843,25 @@ export default function DataControlModal({
         {/* Dynamic Role Authentication Status Banner */}
         <div className={`px-4 py-2.5 flex items-center justify-between text-xs border-b ${
           !currentRole 
-            ? 'bg-amber-950/90 border-amber-500/70 text-amber-200' 
+            ? isLight
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-amber-950/90 border-amber-500/70 text-amber-200' 
             : currentRole === 'INCHEON_LEAD'
-            ? 'bg-[#09232d] border-cyan-500/70 text-cyan-200'
+            ? isLight
+              ? 'bg-sky-50 border-sky-200 text-sky-950'
+              : 'bg-[#09232d] border-cyan-500/70 text-cyan-200'
             : currentRole === 'USA_LEAD'
-            ? 'bg-[#291b0c] border-amber-500/70 text-amber-200'
-            : 'bg-[#0b291a] border-emerald-500/70 text-emerald-200'
+            ? isLight
+              ? 'bg-amber-50 border-amber-200 text-amber-950'
+              : 'bg-[#291b0c] border-amber-500/70 text-amber-200'
+            : isLight
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+              : 'bg-[#0b291a] border-emerald-500/70 text-emerald-200'
         }`}>
           <div className="flex items-center gap-2">
             {!currentRole ? (
               <>
-                <Lock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
+                <Lock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-amber-600' : 'text-amber-400 animate-pulse'}`} />
                 <span>
                   {lang === 'en'
                     ? 'Viewer Mode (Read-Only): Login with Station Lead PIN or Admin passcode to edit inventory.'
@@ -851,7 +870,7 @@ export default function DataControlModal({
               </>
             ) : currentRole === 'INCHEON_LEAD' ? (
               <>
-                <Unlock className="w-4 h-4 text-cyan-400 animate-pulse flex-shrink-0" />
+                <Unlock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-sky-700' : 'text-cyan-400 animate-pulse'}`} />
                 <span className="font-bold">
                   {lang === 'en'
                     ? 'Authenticated: Incheon Lead (Authorized to edit Incheon stock & Pacific dispatches)'
@@ -860,7 +879,7 @@ export default function DataControlModal({
               </>
             ) : currentRole === 'USA_LEAD' ? (
               <>
-                <Unlock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
+                <Unlock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400 animate-pulse'}`} />
                 <span className="font-bold">
                   {lang === 'en'
                     ? 'Authenticated: US Corp Lead (Authorized to edit Kokomo 3-stock & SPE customer inventory)'
@@ -869,7 +888,7 @@ export default function DataControlModal({
               </>
             ) : (
               <>
-                <Unlock className="w-4 h-4 text-emerald-400 animate-pulse flex-shrink-0" />
+                <Unlock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-emerald-700' : 'text-emerald-400 animate-pulse'}`} />
                 <span className="font-bold">
                   {lang === 'en'
                     ? 'Authenticated: Master Admin (Full access to all facilities, Excel upload & system configuration)'
@@ -886,7 +905,11 @@ export default function DataControlModal({
                   sound.playClick();
                   if (onOpenAdminAuth) onOpenAdminAuth();
                 }}
-                className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded transition-all whitespace-nowrap shadow-md flex items-center gap-1"
+                className={`px-3 py-1 font-bold text-xs rounded transition-all whitespace-nowrap shadow-sm flex items-center gap-1 ${
+                  isLight
+                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-md'
+                }`}
               >
                 <Key className="w-3.5 h-3.5" />
                 <span>{lang === 'en' ? 'Station / Admin Login' : '담당자 / 관리자 로그인'}</span>
@@ -897,7 +920,11 @@ export default function DataControlModal({
                   sound.playClick();
                   if (setAuthRole) setAuthRole(null);
                 }}
-                className="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 border border-rose-600 text-rose-200 text-[11px] font-bold rounded transition-colors whitespace-nowrap"
+                className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors whitespace-nowrap shadow-sm ${
+                  isLight
+                    ? 'bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300'
+                    : 'bg-rose-950 hover:bg-rose-900 border border-rose-600 text-rose-200'
+                }`}
               >
                 {lang === 'en' ? 'Logout' : '로그아웃'}
               </button>
@@ -905,7 +932,7 @@ export default function DataControlModal({
           </div>
         </div>
 
-        <div className="flex border-b border-slate-700 bg-[#090e1a] text-xs">
+        <div className={`flex border-b text-xs ${isLight ? 'bg-slate-100/90 border-slate-200' : 'bg-[#090e1a] border-slate-700'}`}>
           <button
             onClick={() => {
               sound.playClick();
@@ -913,8 +940,12 @@ export default function DataControlModal({
             }}
             className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
               activeTab === 'INCHEON' 
-                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? isLight 
+                  ? 'border-blue-500 text-blue-900 bg-blue-100/80 shadow-sm' 
+                  : 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : isLight 
+                  ? 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60' 
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Factory className="w-4 h-4" />
@@ -928,8 +959,12 @@ export default function DataControlModal({
             }}
             className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
               activeTab === 'SHIPMENTS' 
-                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? isLight 
+                  ? 'border-sky-500 text-sky-900 bg-sky-100/80 shadow-sm' 
+                  : 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : isLight 
+                  ? 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60' 
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Ship className="w-4 h-4" />
@@ -943,8 +978,12 @@ export default function DataControlModal({
             }}
             className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
               activeTab === 'US_STOCK' 
-                ? 'border-cyan-400 text-cyan-300 bg-[#132035]' 
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? isLight 
+                  ? 'border-amber-500 text-amber-900 bg-amber-100/80 shadow-sm' 
+                  : 'border-cyan-400 text-cyan-300 bg-[#132035]' 
+                : isLight 
+                  ? 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60' 
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Building2 className="w-4 h-4" />
@@ -958,11 +997,15 @@ export default function DataControlModal({
             }}
             className={`px-4 py-2.5 flex items-center gap-1.5 border-b-2 font-bold transition-colors ${
               activeTab === 'EXCEL' 
-                ? 'border-emerald-400 text-emerald-300 bg-[#0d261e]' 
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? isLight 
+                  ? 'border-emerald-500 text-emerald-900 bg-emerald-100/80 shadow-sm' 
+                  : 'border-emerald-400 text-emerald-300 bg-[#0d261e]' 
+                : isLight 
+                  ? 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60' 
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <FileSpreadsheet className={`w-4 h-4 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
             <span>엑셀(Excel) 연동</span>
           </button>
         </div>
@@ -971,9 +1014,11 @@ export default function DataControlModal({
           {activeTab === 'SHIPMENTS' && (
             <div className="space-y-4">
               {!canEditShipments && (
-                <div className="p-3 bg-amber-950/80 border border-amber-500/80 text-amber-200 rounded flex items-center justify-between shadow">
+                <div className={`p-3 border text-amber-200 rounded flex items-center justify-between shadow-sm ${
+                  isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-950/80 border-amber-500/80 text-amber-200'
+                }`}>
                   <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <Lock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                     <span>
                       {lang === 'en'
                         ? 'LOCKED: Incheon Station Lead or Master Admin authorization required to add or modify shipments.'
@@ -983,7 +1028,9 @@ export default function DataControlModal({
                   {isViewer && (
                     <button
                       onClick={() => { sound.playClick(); if (onOpenAdminAuth) onOpenAdminAuth(); }}
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded whitespace-nowrap ml-2 shadow"
+                      className={`px-2.5 py-1 font-bold text-xs rounded whitespace-nowrap ml-2 shadow-sm ${
+                        isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300' : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                      }`}
                     >
                       로그인
                     </button>
@@ -991,36 +1038,40 @@ export default function DataControlModal({
                 </div>
               )}
 
-              <form onSubmit={handleAddShipment} className={`border p-3.5 space-y-3 transition-opacity ${!canEditShipments ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#101b2d] border-cyan-700/60'}`}>
-                <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
-                  <Plus className="w-4 h-4" /> {lang === 'en' ? 'Register New Shipment Batch' : '신규 운송 차수 등록'}
+              <form onSubmit={handleAddShipment} className={`border p-3.5 space-y-3 transition-opacity rounded ${
+                !canEditShipments 
+                  ? (isLight ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-[#0a0f19] border-slate-800 opacity-60') 
+                  : (isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-[#101b2d] border-cyan-700/60')
+              }`}>
+                <div className={`font-bold flex items-center gap-1.5 text-xs ${isLight ? 'text-slate-900' : 'text-cyan-300'}`}>
+                  <Plus className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} /> {lang === 'en' ? 'Register New Shipment Batch' : '신규 운송 차수 등록'}
                 </div>
 
                 {/* 1. Import Incheon Passed Inspection Lots for Dispatch */}
-                <div className="bg-[#0b1726] border border-cyan-700/60 p-2.5 rounded space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-cyan-800/80 pb-1.5">
-                    <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
-                      <PackageCheck className="w-4 h-4 text-emerald-400" />
+                <div className={`border p-2.5 rounded space-y-2 ${isLight ? 'bg-white border-slate-200' : 'bg-[#0b1726] border-cyan-700/60'}`}>
+                  <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b pb-1.5 ${isLight ? 'border-slate-200' : 'border-cyan-800/80'}`}>
+                    <div className={`font-bold flex items-center gap-1.5 text-xs ${isLight ? 'text-slate-800' : 'text-cyan-300'}`}>
+                      <PackageCheck className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                       <span>{lang === 'en' ? 'Load Incheon Passed Lots (Ready to Ship)' : '인천 출하합격(선적 준비완료) 로트 불러와 차수 편성'}</span>
-                      <span className="text-[10px] text-emerald-300 font-normal">
+                      <span className={`text-[10px] font-normal ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
                         ({incheonInventory.passedInspection.length}건 대기중)
                       </span>
                     </div>
                     {incheonInventory.passedInspection.length > 0 && (
-                      <span className="text-[10px] text-slate-300 font-mono">
-                        {lang === 'en' ? 'Available Stock:' : '선적 대기 합계:'} <b className="text-emerald-400">{toK(incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))}</b> 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
+                      <span className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {lang === 'en' ? 'Available Stock:' : '선적 대기 합계:'} <b className={isLight ? "text-emerald-700 font-bold" : "text-emerald-400"}>{(incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0)).toLocaleString()}</b> EA
                       </span>
                     )}
                   </div>
 
                   {incheonInventory.passedInspection.length === 0 ? (
-                    <div className="text-[11px] text-slate-400 py-1 flex items-center gap-1.5">
+                    <div className={`text-[11px] py-1 flex items-center gap-1.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                       <span className="text-amber-400">ℹ️</span>
                       <span>{lang === 'en' ? 'No inspection-passed lots available. You can enter quantity manually, or approve lots in the Incheon tab.' : '출하합격 상태의 로트가 없습니다. 수량을 직접 입력하거나 [인천 로트 관리] 탭에서 합격 승인하세요.'}</span>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <div className="text-[10.5px] text-slate-300">
+                      <div className={`text-[10.5px] ${isLight ? 'text-slate-600 font-medium' : 'text-slate-300'}`}>
                         {lang === 'en' ? 'Click lots below to automatically load quantities and item names into this shipment:' : '출하합격된 로트를 클릭하여 이번 운송 차수에 적재할 품목으로 자동 반영하세요:'}
                       </div>
                       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
@@ -1032,16 +1083,20 @@ export default function DataControlModal({
                               type="button"
                               disabled={!canEditShipments}
                               onClick={() => handleToggleSelectLot(lot)}
-                              className={`px-2 py-1 rounded text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
+                              className={`px-2.5 py-1 rounded text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
                                 isSelected 
-                                   ? 'bg-emerald-800 text-white border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-300' 
-                                  : 'bg-[#122338] text-cyan-200 border-cyan-700 hover:border-cyan-400 hover:bg-[#18314e]'
+                                  ? isLight
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-400 shadow-sm ring-1 ring-emerald-300'
+                                    : 'bg-emerald-800 text-white border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-300' 
+                                  : isLight
+                                    ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 hover:border-slate-400 shadow-sm'
+                                    : 'bg-[#122338] text-cyan-200 border-cyan-700 hover:border-cyan-400 hover:bg-[#18314e]'
                               }`}
                             >
                               <span>{isSelected ? '✓' : '+'}</span>
                               <span className="font-mono">{lot.id}</span>
-                              <span className="text-slate-300 font-normal">({lot.name})</span>
-                              <span className="text-amber-300 font-mono">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
+                              <span className={`font-normal ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>({lot.name})</span>
+                              <span className={`font-mono ${isLight ? 'text-amber-800 font-bold' : 'text-amber-300'}`}>{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                             </button>
                           );
                         })}
@@ -1188,10 +1243,12 @@ export default function DataControlModal({
                     <button
                       type="submit"
                       disabled={!canEditShipments}
-                      className={`w-full font-bold p-1.5 border flex items-center justify-center gap-1 transition-colors ${
+                      className={`w-full font-bold p-1.5 border rounded flex items-center justify-center gap-1 transition-all shadow-sm ${
                         !canEditShipments
-                          ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                          : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
+                          ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
+                          : isLight
+                            ? 'bg-sky-100 hover:bg-sky-200 text-sky-900 border-sky-300 font-bold'
+                            : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
                       }`}
                     >
                       <Plus className="w-4 h-4" /> 차수 추가
@@ -1201,20 +1258,24 @@ export default function DataControlModal({
               </form>
 
               <div className="space-y-2">
-                <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="text-slate-300 font-bold flex items-center gap-2">
-                    <Ship className="w-4 h-4 text-cyan-400" />
+                <div className={`p-2.5 border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0b1322] border-slate-700'
+                }`}>
+                  <div className={`font-bold flex items-center gap-2 ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+                    <Ship className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} />
                     <span>현재 운송중인 차수 목록 ({shipments.length}건)</span>
-                    <span className="text-[10px] text-cyan-400 font-mono font-normal">· ETA 오름차순 (도착 임박순)</span>
+                    <span className={`text-[10px] font-mono font-normal ${isLight ? 'text-sky-700' : 'text-cyan-400'}`}>· ETA 오름차순 (도착 임박순)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       disabled={!canEditShipments || shipments.length === 0}
                       onClick={handleDeleteAllShipments}
-                      className={`px-2.5 py-1.5 font-bold text-xs rounded border flex items-center gap-1 transition-all shadow ${
+                      className={`px-2.5 py-1.5 font-bold text-xs rounded border flex items-center gap-1 transition-all shadow-sm ${
                         !canEditShipments || shipments.length === 0
-                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-40'
-                          : 'bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-600 hover:border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.2)]'
+                          ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed opacity-40'
+                          : isLight
+                            ? 'bg-rose-100 hover:bg-rose-200 text-rose-900 border-rose-300 font-bold'
+                            : 'bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-600 hover:border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.2)]'
                       }`}
                       title={lang === 'en' ? 'Delete all shipments' : '모든 운송 차수 전체 삭제'}
                     >
@@ -1356,14 +1417,20 @@ export default function DataControlModal({
                           <button
                             type="button"
                             onClick={handleCancelEditShipment}
-                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded border border-slate-600 transition-colors"
+                            className={`px-3 py-1.5 font-bold text-xs rounded border transition-colors ${
+                              isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600'
+                            }`}
                           >
                             {lang === 'en' ? 'Cancel' : '취소'}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleSaveEditShipment(s.id)}
-                            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded border border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)] transition-all flex items-center gap-1.5"
+                            className={`px-4 py-1.5 font-bold text-xs rounded border transition-all flex items-center gap-1.5 shadow-sm ${
+                              isLight
+                                ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300 font-bold'
+                                : 'bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+                            }`}
                           >
                             <Save className="w-3.5 h-3.5" />
                             <span>{lang === 'en' ? 'Save Changes' : '변경사항 저장'}</span>
@@ -1371,54 +1438,60 @@ export default function DataControlModal({
                         </div>
                       </div>
                     ) : (
-                      <div key={s.id} className="p-3 bg-[#0d1624] border border-slate-700 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div key={s.id} className={`p-3 border rounded flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                        isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0d1624] border-slate-700'
+                      }`}>
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-[#17253b] border border-slate-600">
+                          <div className={`p-2 border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#17253b] border-slate-600'}`}>
                             {s.type === 'SEA' ? (
                               s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
                                 <div className="flex items-center gap-0.5" title="해상 + 미내륙 직송트럭">
-                                  <Ship className="w-4 h-4 text-cyan-400" />
-                                  <Truck className="w-3.5 h-3.5 text-amber-400" />
+                                  <Ship className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} />
+                                  <Truck className="w-3.5 h-3.5 text-amber-500" />
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-0.5" title="해상 + 미내륙 화물철송">
-                                  <Ship className="w-4 h-4 text-cyan-400" />
-                                  <Train className="w-3.5 h-3.5 text-emerald-400" />
+                                  <Ship className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} />
+                                  <Train className="w-3.5 h-3.5 text-emerald-600" />
                                 </div>
                               )
                             ) : s.type === 'AIR' ? (
-                              <Plane className="w-5 h-5 text-sky-400" />
+                              <Plane className={`w-5 h-5 ${isLight ? 'text-sky-600' : 'text-sky-400'}`} />
                             ) : s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
-                              <Truck className="w-5 h-5 text-amber-400" />
+                              <Truck className="w-5 h-5 text-amber-500" />
                             ) : (
-                              <Train className="w-5 h-5 text-emerald-400" />
+                              <Train className="w-5 h-5 text-emerald-600" />
                             )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-white text-sm">{s.batchNo}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 border border-slate-600 text-slate-300">
+                              <span className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>{s.batchNo}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 border ${
+                                isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-800 border-slate-600 text-slate-300'
+                              }`}>
                                 {s.vesselName} ({s.containerNo})
                               </span>
                               <span className={`text-[10px] px-1.5 py-0.2 border font-bold flex items-center gap-1 ${
                                 s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK'
-                                  ? 'bg-amber-950/80 border-amber-500 text-amber-300'
-                                  : 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                                  ? isLight ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-amber-950/80 border-amber-500 text-amber-300'
+                                  : isLight ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
                               }`}>
                                 {s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
-                                  <><Truck className="w-3 h-3 text-amber-400" /> 직송트럭</>
+                                  <><Truck className="w-3 h-3 text-amber-500" /> 직송트럭</>
                                 ) : (
-                                  <><Train className="w-3 h-3 text-emerald-400" /> 화물철송</>
+                                  <><Train className="w-3 h-3 text-emerald-600" /> 화물철송</>
                                 )}
                               </span>
                               {s.isDelayed && (
-                                <span className="text-[10px] px-1.5 py-0.2 bg-rose-950 border border-rose-500 text-rose-400 font-bold animate-pulse">
+                                <span className={`text-[10px] px-1.5 py-0.2 border font-bold animate-pulse ${
+                                  isLight ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-rose-950 border-rose-500 text-rose-400'
+                                }`}>
                                   ETA 지연중
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-400 mt-0.5">
-                              적재량: <span className="text-amber-300 font-bold">{(Number(s.quantity) || 0).toLocaleString()} EA</span> | ETA: {s.eta ? s.eta.slice(0, 16).replace('T', ' ') : '-'}
+                            <div className={`text-[11px] mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              적재량: <span className={`font-bold ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>{(Number(s.quantity) || 0).toLocaleString()} EA</span> | ETA: {s.eta ? s.eta.slice(0, 16).replace('T', ' ') : '-'}
                             </div>
                           </div>
                         </div>
@@ -1427,7 +1500,7 @@ export default function DataControlModal({
                           <div className="w-32 sm:w-36">
                             <div className="flex justify-between text-[10px] text-slate-400 mb-1">
                               <span>위치 진행률</span>
-                              <span className="text-cyan-400 font-bold">{Math.round(s.progress)}%</span>
+                              <span className={`font-bold ${isLight ? 'text-sky-700' : 'text-cyan-400'}`}>{Math.round(s.progress)}%</span>
                             </div>
                             <input
                               type="range"
@@ -1436,7 +1509,7 @@ export default function DataControlModal({
                               value={s.progress}
                               onChange={(e) => handleProgressChange(s.id, e.target.value)}
                               disabled={!canEditShipments}
-                              className={`w-full accent-cyan-400 ${!canEditShipments ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
+                              className={`w-full ${isLight ? 'accent-sky-600' : 'accent-cyan-400'} ${!canEditShipments ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
                             />
                           </div>
 
@@ -1445,24 +1518,30 @@ export default function DataControlModal({
                             onClick={() => handleStartEditShipment(s)}
                             className={`px-2.5 py-1 border text-[11px] font-bold rounded flex items-center gap-1 transition-all whitespace-nowrap shadow-sm ${
                               !canEditShipments
-                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
-                                : 'bg-[#15283f] hover:bg-[#1f3b5c] border-cyan-500/80 text-cyan-200 hover:text-white'
+                                ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-40'
+                                : isLight
+                                  ? 'bg-sky-100 hover:bg-sky-200 border-sky-300 text-sky-900 font-bold'
+                                  : 'bg-[#15283f] hover:bg-[#1f3b5c] border-cyan-500/80 text-cyan-200 hover:text-white'
                             }`}
                             title={lang === 'en' ? 'Edit shipment details' : '차수 정보 상세 수정'}
                           >
-                            <Edit2 className="w-3.5 h-3.5 text-cyan-300" />
+                            <Edit2 className={`w-3.5 h-3.5 ${isLight ? 'text-sky-700' : 'text-cyan-300'}`} />
                             <span>{lang === 'en' ? 'Edit' : '수정'}</span>
                           </button>
 
                           <button
                             disabled={!canEditShipments}
                             onClick={() => handleToggleDelay(s.id)}
-                            className={`px-2 py-1 border text-[11px] font-bold rounded whitespace-nowrap transition-all ${
+                            className={`px-2 py-1 border text-[11px] font-bold rounded whitespace-nowrap transition-all shadow-sm ${
                               !canEditShipments
-                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                                ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-40'
                                 : s.isDelayed 
-                                ? 'bg-rose-950 border-rose-500 text-rose-300' 
-                                : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
+                                ? isLight
+                                  ? 'bg-rose-100 hover:bg-rose-200 border-rose-300 text-rose-900 font-bold'
+                                  : 'bg-rose-950 border-rose-500 text-rose-300' 
+                                : isLight
+                                  ? 'bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-900 font-bold'
+                                  : 'bg-[#182638] border-slate-600 text-slate-300 hover:text-white'
                             }`}
                           >
                             {s.isDelayed ? '지연 해제' : '지연 처리'}
@@ -1471,10 +1550,12 @@ export default function DataControlModal({
                           <button
                             disabled={!canEditShipments}
                             onClick={() => handleDeleteShipment(s.id)}
-                            className={`p-1.5 border rounded transition-all shrink-0 ${
+                            className={`p-1.5 border rounded transition-all shrink-0 shadow-sm ${
                               !canEditShipments
-                                ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
-                                : 'bg-[#261517] hover:bg-rose-900 border-rose-700 text-rose-300'
+                                ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-40'
+                                : isLight
+                                  ? 'bg-rose-100 hover:bg-rose-200 border-rose-300 text-rose-800'
+                                  : 'bg-[#261517] hover:bg-rose-900 border-rose-700 text-rose-300'
                             }`}
                             title="차수 삭제"
                           >
@@ -1493,9 +1574,11 @@ export default function DataControlModal({
           {activeTab === 'INCHEON' && (
             <div className="space-y-4">
               {!canEditIncheon && (
-                <div className="p-3 bg-amber-950/80 border border-amber-500/80 text-amber-200 rounded flex items-center justify-between shadow">
+                <div className={`p-3 border rounded flex items-center justify-between shadow-sm ${
+                  isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-950/80 border-amber-500/80 text-amber-200'
+                }`}>
                   <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <Lock className={`w-4 h-4 flex-shrink-0 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                     <span>
                       {lang === 'en'
                         ? 'LOCKED: Incheon Station Lead or Master Admin authorization required to edit Incheon stock.'
@@ -1505,7 +1588,9 @@ export default function DataControlModal({
                   {isViewer && (
                     <button
                       onClick={() => { sound.playClick(); if (onOpenAdminAuth) onOpenAdminAuth(); }}
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded whitespace-nowrap ml-2 shadow"
+                      className={`px-2.5 py-1 font-bold text-xs rounded whitespace-nowrap ml-2 shadow-sm ${
+                        isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300' : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                      }`}
                     >
                       로그인
                     </button>
@@ -1513,16 +1598,22 @@ export default function DataControlModal({
                 </div>
               )}
 
-              <div className="bg-[#0b1322] p-2.5 border border-slate-700 flex items-center justify-between">
-                <div className="text-slate-300 font-bold flex items-center gap-2">
-                  <Factory className="w-4 h-4 text-cyan-400" />
+              <div className={`p-2.5 border rounded flex items-center justify-between ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0b1322] border-slate-700'
+              }`}>
+                <div className={`font-bold flex items-center gap-2 ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+                  <Factory className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} />
                   <span>인천 생산 및 출하합격 재고 현황 ({incheonInventory.waitingInspection.length + incheonInventory.passedInspection.length}개 로트)</span>
                 </div>
               </div>
 
-              <form onSubmit={handleAddLot} className={`border p-3 space-y-2 transition-opacity ${!canEditIncheon ? 'bg-[#0a0f19] border-slate-800 opacity-60' : 'bg-[#0f1d2c] border-cyan-800'}`}>
-                <div className="font-bold text-cyan-300 flex items-center gap-1.5 text-xs">
-                  <Plus className="w-4 h-4" /> 인천 신규 생산 로트 등록
+              <form onSubmit={handleAddLot} className={`border p-3 space-y-2 rounded transition-opacity ${
+                !canEditIncheon 
+                  ? (isLight ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-[#0a0f19] border-slate-800 opacity-60') 
+                  : (isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-[#0f1d2c] border-cyan-800')
+              }`}>
+                <div className={`font-bold flex items-center gap-1.5 text-xs ${isLight ? 'text-slate-900' : 'text-cyan-300'}`}>
+                  <Plus className={`w-4 h-4 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} /> 인천 신규 생산 로트 등록
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                   <div>
@@ -1572,10 +1663,12 @@ export default function DataControlModal({
                     <button
                       type="submit"
                       disabled={!canEditIncheon}
-                      className={`w-full font-bold p-1.5 border text-xs transition-colors ${
+                      className={`w-full font-bold p-1.5 border rounded text-xs transition-all shadow-sm ${
                         !canEditIncheon
-                          ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                          : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
+                          ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
+                          : isLight
+                            ? 'bg-sky-100 hover:bg-sky-200 text-sky-900 border-sky-300 font-bold'
+                            : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
                       }`}
                     >
                       검사대기 로트 등록
@@ -1585,31 +1678,35 @@ export default function DataControlModal({
               </form>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-amber-500/50 bg-[#16140d] p-3">
-                  <div className="flex items-center justify-between border-b border-amber-800 pb-1.5 mb-2">
-                    <span className="font-bold text-amber-300 flex items-center gap-1">
-                      <Clock className="w-4 h-4" /> 검사대기 목록
+                <div className={`border p-3 rounded ${isLight ? 'bg-amber-50/40 border-amber-200' : 'border-amber-500/50 bg-[#16140d]'}`}>
+                  <div className={`flex items-center justify-between border-b pb-1.5 mb-2 ${isLight ? 'border-amber-200' : 'border-amber-800'}`}>
+                    <span className={`font-bold flex items-center gap-1 ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
+                      <Clock className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} /> 검사대기 목록
                     </span>
-                    <span className="text-[10px] text-amber-400 font-bold">
+                    <span className={`text-[10px] font-bold ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>
                       총 {incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {incheonInventory.waitingInspection.map(lot => (
-                      <div key={lot.id} className="p-2 bg-[#201d14] border border-amber-700/60 rounded flex items-center justify-between gap-2 overflow-hidden">
+                      <div key={lot.id} className={`p-2 border rounded flex items-center justify-between gap-2 overflow-hidden ${
+                        isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#201d14] border-amber-700/60'
+                      }`}>
                         <div className="min-w-0 flex-1 pr-1">
-                          <div className="text-white font-bold text-xs truncate">{lot.id}</div>
-                          <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-amber-300 font-semibold">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
+                          <div className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{lot.id}</div>
+                          <div className={`text-[10px] sm:text-[11px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {lot.name} | <span className={`font-semibold ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                           </div>
                         </div>
                         <button
                           disabled={!canEditIncheon}
                           onClick={() => handleApproveLot(lot.id)}
-                          className={`px-2.5 py-1 font-bold text-[10px] sm:text-[10.5px] border rounded transition-all whitespace-nowrap shrink-0 ${
+                          className={`px-2.5 py-1 font-bold text-[10px] sm:text-[10.5px] border rounded transition-all whitespace-nowrap shrink-0 shadow-sm ${
                             !canEditIncheon
-                              ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
-                              : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-400 shadow'
+                              ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-40'
+                              : isLight
+                                ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 font-bold'
+                                : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-400 shadow'
                           }`}
                         >
                           출하합격 승인
@@ -1619,41 +1716,45 @@ export default function DataControlModal({
                   </div>
                 </div>
 
-                <div className="border border-emerald-500/50 bg-[#0d1c16] p-3">
-                  <div className="flex items-center justify-between border-b border-emerald-800 pb-1.5 mb-2">
-                    <span className="font-bold text-emerald-300 flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" /> 출하합격 (선적 준비완료)
+                <div className={`border p-3 rounded ${isLight ? 'bg-emerald-50/40 border-emerald-200' : 'border-emerald-500/50 bg-[#0d1c16]'}`}>
+                  <div className={`flex items-center justify-between border-b pb-1.5 mb-2 ${isLight ? 'border-emerald-200' : 'border-emerald-800'}`}>
+                    <span className={`font-bold flex items-center gap-1 ${isLight ? 'text-emerald-900' : 'text-emerald-300'}`}>
+                      <CheckCircle className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} /> 출하합격 (선적 준비완료)
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-bold">
+                    <span className={`text-[10px] font-bold ${isLight ? 'text-emerald-800' : 'text-emerald-400'}`}>
                       총 {incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {incheonInventory.passedInspection.map(lot => (
-                      <div key={lot.id} className="p-2 bg-[#122820] border border-emerald-700/60 rounded flex items-center justify-between gap-2 overflow-hidden">
+                      <div key={lot.id} className={`p-2 border rounded flex items-center justify-between gap-2 overflow-hidden ${
+                        isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#122820] border-emerald-700/60'
+                      }`}>
                         <div className="min-w-0 flex-1 pr-1">
-                          <div className="text-white font-bold text-xs truncate">{lot.id}</div>
-                          <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-emerald-300 font-semibold">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
+                          <div className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{lot.id}</div>
+                          <div className={`text-[10px] sm:text-[11px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {lot.name} | <span className={`font-semibold ${isLight ? 'text-emerald-800' : 'text-emerald-300'}`}>{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-emerald-300 font-bold text-[9px] sm:text-[10px] border border-emerald-600 bg-emerald-950/70 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                          <span className={`font-bold text-[9px] sm:text-[10px] border px-1.5 py-0.5 rounded whitespace-nowrap shrink-0 ${
+                            isLight ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'border-emerald-600 bg-emerald-950/70 text-emerald-300'
+                          }`}>
                             수출 선적대기
                           </span>
                           <button
                             type="button"
                             disabled={!canEditIncheon}
                             onClick={() => handleReturnLotToWaiting(lot.id)}
-                            className={`px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
+                            className={`px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors shadow-sm ${
                               !canEditIncheon
-                                ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed opacity-40'
-                                : 'bg-[#182638] hover:bg-[#223650] text-amber-300 border-amber-500/60 hover:border-amber-400'
+                                ? 'bg-slate-200 text-slate-400 border-slate-300 cursor-not-allowed opacity-40'
+                                : isLight
+                                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600'
                             }`}
-                            title={lang === 'en' ? 'Return to pending inspection' : '검사대기 목록으로 되돌리기'}
                           >
-                            <RotateCcw className="w-3 h-3 text-amber-400 shrink-0" />
-                            <span className="whitespace-nowrap">{lang === 'en' ? 'Return' : '검사대기로 환원'}</span>
+                            <Undo2 className="w-3 h-3" /> 승인 취소
                           </button>
                         </div>
                       </div>
@@ -1688,17 +1789,23 @@ export default function DataControlModal({
               )}
 
               {/* Model Switcher Sub-nav for Independent Inventory Management */}
-              <div className="p-3 bg-[#0a1324] border border-cyan-500/60 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className={`p-3 border rounded flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0a1324] border-cyan-500/60'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-cyan-300 font-bold text-xs">품목별 재고 편집 대상:</span>
+                  <span className={`font-bold text-xs ${isLight ? 'text-slate-800' : 'text-cyan-300'}`}>품목별 재고 편집 대상:</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setSelectedStockModel('ESS8-1')}
-                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm ${
                         selectedStockModel === 'ESS8-1'
-                          ? 'bg-cyan-600 text-white border border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                          ? isLight
+                            ? 'bg-sky-100 text-sky-900 border border-sky-300 font-bold'
+                            : 'bg-cyan-600 text-white border border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                          : isLight
+                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
                       }`}
                     >
                       <span>📦 ESS8-1 (기존 DB 데이터)</span>
@@ -1706,37 +1813,49 @@ export default function DataControlModal({
                     <button
                       type="button"
                       onClick={() => setSelectedStockModel('ESS11-1')}
-                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm ${
                         selectedStockModel === 'ESS11-1'
-                          ? 'bg-amber-600 text-white border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                          ? isLight
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
+                            : 'bg-amber-600 text-white border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                          : isLight
+                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
                       }`}
                     >
                       <span>⚡ ESS11-1 (신규 별도 관리)</span>
                     </button>
                   </div>
                 </div>
-                <div className="text-[11px] text-slate-400">
-                  현재 편집 중: <span className="font-bold text-cyan-300">{selectedStockModel}</span> 독립 재고
+                <div className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  현재 편집 중: <span className={`font-bold ${isLight ? 'text-sky-700' : 'text-cyan-300'}`}>{selectedStockModel}</span> 독립 재고
                 </div>
               </div>
 
               {/* Kokomo Facility Stock Form */}
-              <div className={`border p-4 space-y-3 rounded transition-opacity ${!canEditKokomo ? 'bg-[#120d07] border-slate-800 opacity-60' : 'bg-[#18120b] border-amber-600'}`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-800/60 pb-2">
-                  <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
-                    <Building2 className="w-4 h-4 text-amber-400" />
+              <div className={`border p-4 space-y-3 rounded transition-opacity ${
+                !canEditKokomo 
+                  ? (isLight ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-[#120d07] border-slate-800 opacity-60') 
+                  : (isLight ? 'bg-amber-50/40 border-amber-200' : 'bg-[#18120b] border-amber-600')
+              }`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 ${isLight ? 'border-amber-200' : 'border-amber-800/60'}`}>
+                  <div className={`font-bold flex items-center gap-1.5 text-xs ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
+                    <Building2 className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                     <span>미주법인 (코코모) 3대 재고 - [{selectedStockModel}]</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-amber-300/80">
-                      선택 품목 합계: <b className="text-white">{((kokomoByProduct[selectedStockModel]?.multiAssy || 0) + (kokomoByProduct[selectedStockModel]?.capAssy || 0) + (kokomoByProduct[selectedStockModel]?.backShip || 0)).toLocaleString()} EA</b>
+                    <span className={`text-[11px] ${isLight ? 'text-amber-900/80 font-medium' : 'text-amber-300/80'}`}>
+                      선택 품목 합계: <b className={isLight ? 'text-slate-900 font-bold' : 'text-white'}>{((kokomoByProduct[selectedStockModel]?.multiAssy || 0) + (kokomoByProduct[selectedStockModel]?.capAssy || 0) + (kokomoByProduct[selectedStockModel]?.backShip || 0)).toLocaleString()} EA</b>
                     </span>
                     <button
                       type="button"
                       disabled={!canEditKokomo}
                       onClick={handleSaveKokomo}
-                      className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded border border-amber-300 transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                      className={`px-3 py-1 font-bold text-xs rounded border transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
+                        isLight
+                          ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300 font-bold'
+                          : 'bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-300'
+                      }`}
                     >
                       <Save className="w-3.5 h-3.5" />
                       <span>{selectedStockModel} 법인재고 저장</span>
@@ -1745,7 +1864,9 @@ export default function DataControlModal({
                 </div>
 
                 {arrivedQty > 0 && (
-                  <div className="p-2 bg-emerald-950/80 border border-emerald-500/80 text-emerald-200 rounded text-[11px] flex items-center justify-between shadow">
+                  <div className={`p-2 border rounded text-[11px] flex items-center justify-between shadow-sm ${
+                    isLight ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-emerald-950/80 border-emerald-500/80 text-emerald-200'
+                  }`}>
                     <span>🚚 <b>시뮬레이션 입고 연동 안내:</b> 현재 도착 완료된 차수({arrivedCount}건)로 인해 메인 지도 및 HUD의 코코모 재고에 <b>+{arrivedQty.toLocaleString()} EA</b>가 실시간 합산 표시됩니다.</span>
                   </div>
                 )}
@@ -1753,8 +1874,8 @@ export default function DataControlModal({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-cyan-300 font-bold">Multi Assy 수량 (EA)</label>
-                      <span className="text-cyan-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.multiAssy) || 0).toLocaleString()} EA)</span>
+                      <label className={`font-bold ${isLight ? 'text-slate-700' : 'text-cyan-300'}`}>Multi Assy 수량 (EA)</label>
+                      <span className={`font-mono text-[10px] ${isLight ? 'text-sky-700 font-bold' : 'text-cyan-400'}`}>(= {(Number(kokomoByProduct[selectedStockModel]?.multiAssy) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
@@ -1762,17 +1883,17 @@ export default function DataControlModal({
                       value={kokomoByProduct[selectedStockModel]?.multiAssy ?? 0}
                       onChange={e => handleKokomoFieldChange('multiAssy', e.target.value)}
                       disabled={!canEditKokomo}
-                      className={`w-full p-2 font-bold outline-none border ${
+                      className={`w-full p-2 font-bold outline-none border rounded ${
                         !canEditKokomo
                           ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-[#0c121d] border-cyan-600 text-cyan-200 focus:border-cyan-400'
+                          : isLight ? 'bg-white border-slate-300 text-slate-900 focus:border-sky-500' : 'bg-[#0c121d] border-cyan-600 text-cyan-200 focus:border-cyan-400'
                       }`}
                     />
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-emerald-300 font-bold">Cap Assy 수량 (EA)</label>
-                      <span className="text-emerald-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.capAssy) || 0).toLocaleString()} EA)</span>
+                      <label className={`font-bold ${isLight ? 'text-slate-700' : 'text-emerald-300'}`}>Cap Assy 수량 (EA)</label>
+                      <span className={`font-mono text-[10px] ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>(= {(Number(kokomoByProduct[selectedStockModel]?.capAssy) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
@@ -1780,17 +1901,17 @@ export default function DataControlModal({
                       value={kokomoByProduct[selectedStockModel]?.capAssy ?? 0}
                       onChange={e => handleKokomoFieldChange('capAssy', e.target.value)}
                       disabled={!canEditKokomo}
-                      className={`w-full p-2 font-bold outline-none border ${
+                      className={`w-full p-2 font-bold outline-none border rounded ${
                         !canEditKokomo
                           ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-[#0c121d] border-emerald-600 text-emerald-200 focus:border-emerald-400'
+                          : isLight ? 'bg-white border-slate-300 text-slate-900 focus:border-emerald-500' : 'bg-[#0c121d] border-emerald-600 text-emerald-200 focus:border-emerald-400'
                       }`}
                     />
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-rose-300 font-bold">Back ship 수량 (EA)</label>
-                      <span className="text-rose-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.backShip) || 0).toLocaleString()} EA)</span>
+                      <label className={`font-bold ${isLight ? 'text-slate-700' : 'text-rose-300'}`}>Back ship 수량 (EA)</label>
+                      <span className={`font-mono text-[10px] ${isLight ? 'text-rose-700 font-bold' : 'text-rose-400'}`}>(= {(Number(kokomoByProduct[selectedStockModel]?.backShip) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
@@ -1798,10 +1919,10 @@ export default function DataControlModal({
                       value={kokomoByProduct[selectedStockModel]?.backShip ?? 0}
                       onChange={e => handleKokomoFieldChange('backShip', e.target.value)}
                       disabled={!canEditKokomo}
-                      className={`w-full p-2 font-bold outline-none border ${
+                      className={`w-full p-2 font-bold outline-none border rounded ${
                         !canEditKokomo
                           ? 'bg-[#080d16] border-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-[#0c121d] border-rose-600 text-rose-200 focus:border-rose-400'
+                          : isLight ? 'bg-white border-slate-300 text-slate-900 focus:border-rose-500' : 'bg-[#0c121d] border-rose-600 text-rose-200 focus:border-rose-400'
                       }`}
                     />
                   </div>
@@ -1809,17 +1930,25 @@ export default function DataControlModal({
               </div>
 
               {/* Customer SPE Inventory Form */}
-              <div className={`border p-4 space-y-3 rounded transition-opacity ${!canEditSpe ? 'bg-[#07130e] border-slate-800 opacity-60' : 'bg-[#0b1c14] border-emerald-600'}`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-800/60 pb-2">
-                  <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
-                    <Factory className="w-4 h-4 text-emerald-400" />
+              <div className={`border p-4 space-y-3 rounded transition-opacity ${
+                !canEditSpe 
+                  ? (isLight ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-[#07130e] border-slate-800 opacity-60') 
+                  : (isLight ? 'bg-emerald-50/40 border-emerald-200' : 'bg-[#0b1c14] border-emerald-600')
+              }`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 ${isLight ? 'border-emerald-200' : 'border-emerald-800/60'}`}>
+                  <div className={`font-bold flex items-center gap-1.5 text-xs ${isLight ? 'text-emerald-900' : 'text-emerald-300'}`}>
+                    <Factory className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                     <span>고객 SPE 현장 잔여 재고 및 일일 소진율 - [{selectedStockModel}]</span>
                   </div>
                   <button
                     type="button"
                     disabled={!canEditSpe}
                     onClick={handleSaveSpe}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded border border-emerald-300 transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={`px-3 py-1 font-bold text-xs rounded border transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isLight
+                        ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 font-bold'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 border-emerald-300'
+                    }`}
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{selectedStockModel} 고객재고 저장</span>
@@ -1971,13 +2100,15 @@ export default function DataControlModal({
           {activeTab === 'EXCEL' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-cyan-600 bg-[#0e1828] p-4 flex flex-col justify-between space-y-3">
+                <div className={`border p-4 flex flex-col justify-between space-y-3 rounded ${
+                  isLight ? 'bg-sky-50/40 border-sky-200' : 'border-cyan-600 bg-[#0e1828]'
+                }`}>
                   <div>
-                    <div className="font-bold text-cyan-300 text-sm flex items-center gap-2">
-                      <Download className="w-5 h-5 text-cyan-400" />
+                    <div className={`font-bold text-sm flex items-center gap-2 ${isLight ? 'text-sky-900' : 'text-cyan-300'}`}>
+                      <Download className={`w-5 h-5 ${isLight ? 'text-sky-600' : 'text-cyan-400'}`} />
                       현재 재고·물류 엑셀 내보내기
                     </div>
-                    <p className="text-slate-400 text-xs mt-1">
+                    <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                       인천 재고(로트), 운송 차수(ETA, 위치), 미주법인(Multi/Cap/Back ship), SPE 고객재고를 통합 엑셀(.xlsx) 파일로 다운로드합니다.
                     </p>
                   </div>
@@ -1986,20 +2117,26 @@ export default function DataControlModal({
                       sound.playSuccess();
                       exportToExcel(incheonInventory, shipments, kokomoInventory, speInventory);
                     }}
-                    className="w-full py-2 bg-cyan-700 hover:bg-cyan-600 text-white font-bold border border-cyan-400 shadow flex items-center justify-center gap-2"
+                    className={`w-full py-2 font-bold border rounded shadow-sm flex items-center justify-center gap-2 transition-all ${
+                      isLight
+                        ? 'bg-sky-100 hover:bg-sky-200 text-sky-900 border-sky-300 font-bold'
+                        : 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-400 shadow'
+                    }`}
                   >
                     <FileSpreadsheet className="w-4 h-4" />
                     전체 데이터 엑셀(.xlsx) 다운로드
                   </button>
                 </div>
 
-                <div className="border border-emerald-600 bg-[#0e241b] p-4 flex flex-col justify-between space-y-3">
+                <div className={`border p-4 flex flex-col justify-between space-y-3 rounded ${
+                  isLight ? 'bg-emerald-50/40 border-emerald-200' : 'border-emerald-600 bg-[#0e241b]'
+                }`}>
                   <div>
-                    <div className="font-bold text-emerald-300 text-sm flex items-center gap-2">
-                      <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                    <div className={`font-bold text-sm flex items-center gap-2 ${isLight ? 'text-emerald-900' : 'text-emerald-300'}`}>
+                      <FileSpreadsheet className={`w-5 h-5 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                       차수 업로드용 템플릿 다운로드
                     </div>
-                    <p className="text-slate-400 text-xs mt-1">
+                    <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                       새로운 운송 차수나 대량 데이터를 업로드하기 위한 사전 양식을 다운로드합니다.
                     </p>
                   </div>
@@ -2008,7 +2145,11 @@ export default function DataControlModal({
                       sound.playClick();
                       downloadSampleTemplate();
                     }}
-                    className="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold border border-emerald-400 shadow flex items-center justify-center gap-2"
+                    className={`w-full py-2 font-bold border rounded shadow-sm flex items-center justify-center gap-2 transition-all ${
+                      isLight
+                        ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 font-bold'
+                        : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-400 shadow'
+                    }`}
                   >
                     <Download className="w-4 h-4" />
                     업로드용 샘플 템플릿 받기
@@ -2016,11 +2157,15 @@ export default function DataControlModal({
                 </div>
               </div>
 
-              <div className={`border-2 border-dashed p-6 text-center space-y-3 transition-opacity ${!canUploadExcel ? 'border-slate-800 bg-[#070b13] opacity-60' : 'border-cyan-500/70 bg-[#0b1424]'}`}>
-                <Upload className={`w-10 h-10 mx-auto ${!canUploadExcel ? 'text-slate-600' : 'text-cyan-400 animate-bounce'}`} />
+              <div className={`border-2 border-dashed p-6 text-center space-y-3 rounded transition-opacity ${
+                !canUploadExcel 
+                  ? (isLight ? 'border-slate-300 bg-slate-50 opacity-60' : 'border-slate-800 bg-[#070b13] opacity-60') 
+                  : (isLight ? 'border-sky-300 bg-sky-50/30' : 'border-cyan-500/70 bg-[#0b1424]')
+              }`}>
+                <Upload className={`w-10 h-10 mx-auto ${!canUploadExcel ? 'text-slate-400' : isLight ? 'text-sky-600 animate-bounce' : 'text-cyan-400 animate-bounce'}`} />
                 <div>
-                  <h3 className="text-sm font-bold text-white">{lang === 'en' ? 'Upload Excel (.xlsx) or CSV File' : '엑셀(.xlsx) 또는 CSV 파일 업로드'}</h3>
-                  <p className="text-slate-400 text-xs mt-0.5">
+                  <h3 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{lang === 'en' ? 'Upload Excel (.xlsx) or CSV File' : '엑셀(.xlsx) 또는 CSV 파일 업로드'}</h3>
+                  <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     {!canUploadExcel
                       ? (lang === 'en' ? '🔒 [Upload Locked] Station Lead or Admin authorization required to upload.' : '🔒 [업로드 잠김] 담당자 또는 관리자 로그인 후 업로드할 수 있습니다.')
                       : (lang === 'en' ? 'Upload schedule file to instantly register and sync to cloud.' : '작성된 운송 데이터 파일을 선택하여 즉시 대시보드 및 클라우드에 영구 반영하세요.')}
@@ -2042,20 +2187,22 @@ export default function DataControlModal({
                       if (onOpenAdminAuth) onOpenAdminAuth();
                     }
                   }}
-                  className={`inline-block px-4 py-2 font-bold border transition-colors ${
+                  className={`inline-block px-4 py-2 font-bold border rounded transition-all shadow-sm ${
                     !canUploadExcel
-                      ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                      : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer border-cyan-300 shadow'
+                      ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
+                      : isLight
+                        ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border-indigo-300 cursor-pointer font-bold'
+                        : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer border-cyan-300 shadow'
                   }`}
                 >
                   {!canUploadExcel ? (lang === 'en' ? '🔒 Authorization Required (Login)' : '🔒 권한 필요 (로그인)') : (lang === 'en' ? 'Browse File...' : '파일 찾아보기...')}
                 </label>
 
                 {uploadMessage && (
-                  <div className={`p-2 border text-xs font-bold ${
+                  <div className={`p-2 border rounded text-xs font-bold ${
                     uploadMessage.type === 'success' 
-                      ? 'bg-emerald-950 border-emerald-500 text-emerald-300' 
-                      : 'bg-rose-950 border-rose-500 text-rose-300'
+                      ? isLight ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-emerald-950 border-emerald-500 text-emerald-300' 
+                      : isLight ? 'bg-rose-50 border-rose-300 text-rose-900' : 'bg-rose-950 border-rose-500 text-rose-300'
                   }`}>
                     {uploadMessage.text}
                   </div>
@@ -2065,15 +2212,17 @@ export default function DataControlModal({
           )}
         </div>
 
-        <div className="bg-[#101b2d] px-4 py-2.5 border-t border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className={`px-4 py-2.5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+          isLight ? 'bg-slate-100/90 border-slate-200' : 'bg-[#101b2d] border-slate-700'
+        }`}>
           <div>
             {currentRole ? (
-              <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+              <span className={`text-[11px] font-bold flex items-center gap-1 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                 <CheckCircle className="w-3.5 h-3.5" />
                 <span>데이터 입력 후 [저장] 버튼을 누르면 클라우드(DB)와 브라우저에 즉시 영구 보존됩니다.</span>
               </span>
             ) : (
-              <span className="text-[11px] text-amber-400 font-bold flex items-center gap-1">
+              <span className={`text-[11px] font-bold flex items-center gap-1 ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>
                 <Lock className="w-3.5 h-3.5" />
                 <span>현재 열람 모드입니다. 데이터를 수정하려면 우측 상단 로그인 버튼을 누르세요.</span>
               </span>
@@ -2082,7 +2231,11 @@ export default function DataControlModal({
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveAllData}
-              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-black text-xs rounded flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.35)] transition-all whitespace-nowrap cursor-pointer"
+              className={`px-4 py-1.5 font-bold text-xs rounded flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-sm ${
+                isLight
+                  ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 font-bold'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+              }`}
               title={currentRole ? "전체 거점 재고 및 운송 차수 데이터를 클라우드에 영구 저장" : "관리자 로그인 후 저장 가능"}
             >
               <Save className="w-3.5 h-3.5" />
@@ -2093,7 +2246,11 @@ export default function DataControlModal({
                 sound.playClick();
                 onClose();
               }}
-              className="px-4 py-1.5 bg-[#1f2e46] hover:bg-[#2b3e5e] text-white border border-slate-500 font-bold rounded whitespace-nowrap"
+              className={`px-4 py-1.5 font-bold rounded whitespace-nowrap transition-colors border shadow-sm ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  : 'bg-[#1f2e46] hover:bg-[#2b3e5e] text-white border-slate-500'
+              }`}
             >
               닫기
             </button>

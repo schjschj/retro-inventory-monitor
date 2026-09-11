@@ -55,7 +55,7 @@ export default function SettingsModal({
   isAdmin = false,
   authRole = null,
   onOpenAdminAuth,
-  themeMode = 'light',
+  themeMode = 'dark',
   setThemeMode
 }) {
   const incheonInputRef = useRef(null);

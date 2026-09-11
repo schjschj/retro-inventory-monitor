@@ -131,12 +131,12 @@ export default function App() {
     } catch (e) {}
   };
 
-  // Theme Mode State ('dark' | 'light') - Default: light mode
+  // Theme Mode State ('dark' | 'light') - Default: dark mode
   const [themeMode, setThemeMode] = useState(() => {
     try {
-      return localStorage.getItem('tactical_theme_mode') || 'light';
+      return localStorage.getItem('tactical_theme_mode') || 'dark';
     } catch (e) {
-      return 'light';
+      return 'dark';
     }
   });
 
