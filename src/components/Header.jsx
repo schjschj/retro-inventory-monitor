@@ -92,7 +92,7 @@ export default function Header({
   };
 
   return (
-    <header className="w-full bg-[#0a0f1c]/95 border-b-2 border-[#223652] px-3 py-1.5 shadow-lg relative z-30 select-none overflow-hidden">
+    <header className="w-full bg-[#0a0f1c]/95 border-b-2 border-[#223652] px-3 py-1.5 shadow-lg relative z-50 select-none overflow-visible">
       <div className="w-full flex items-center justify-between flex-nowrap gap-2">
         
         {/* Left: Tactical Logo & Operation Title */}
@@ -124,7 +124,7 @@ export default function Header({
         </div>
 
         {/* Product Selector Dropdown (ESS8-1 / ESS11-1 / ALL) */}
-        <div className="relative flex-shrink-0" ref={productMenuRef}>
+        <div className="relative flex-shrink-0 z-50" ref={productMenuRef}>
           <button
             onClick={() => {
               sound.playClick();
@@ -139,7 +139,7 @@ export default function Header({
           </button>
 
           {isProductMenuOpen && (
-            <div className="absolute top-full mt-1.5 left-0 w-44 bg-[#09111c] border-2 border-cyan-400 shadow-2xl z-50 p-1 font-mono space-y-1 animate-fadeIn">
+            <div className="absolute top-full mt-2 left-0 w-48 bg-[#09111c] border-2 border-cyan-400 shadow-[0_12px_30px_rgba(0,0,0,0.9)] z-[100] p-1 font-mono space-y-1 animate-fadeIn rounded">
               <div className="px-2 py-1 text-[10px] text-slate-400 border-b border-slate-700 font-bold">
                 {lang === 'ko' ? '■ 품목별 전술 관제 선택' : '■ Select Product Model'}
               </div>

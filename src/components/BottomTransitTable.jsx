@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ship, Plane, Truck, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Ship, Plane, Truck, Train, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { sound } from '../utils/soundFx';
 import { formatDateDisplay } from '../utils/excelParser';
 import { t } from '../utils/i18n';
@@ -91,15 +91,37 @@ export default function BottomTransitTable({
                 >
                   <td className="p-2">
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] bg-[#1a283e] border border-slate-600">
-                      {s.type === 'SEA' ? <Ship className="w-3.5 h-3.5 text-cyan-400" /> : s.type === 'AIR' ? <Plane className="w-3.5 h-3.5 text-sky-400" /> : <Truck className="w-3.5 h-3.5 text-amber-400" />}
+                      {s.type === 'SEA' ? (
+                        s.inlandMode === 'TRUCK' ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Ship className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="text-slate-400 text-[9px]">+</span>
+                            <Truck className="w-3.5 h-3.5 text-amber-400" />
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <Ship className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="text-slate-400 text-[9px]">+</span>
+                            <Train className="w-3.5 h-3.5 text-emerald-400" />
+                          </span>
+                        )
+                      ) : s.type === 'AIR' ? (
+                        <Plane className="w-3.5 h-3.5 text-sky-400" />
+                      ) : s.inlandMode === 'TRUCK' || s.type === 'TRUCK' ? (
+                        <Truck className="w-3.5 h-3.5 text-amber-400" />
+                      ) : (
+                        <Train className="w-3.5 h-3.5 text-emerald-400" />
+                      )}
                       <span className="font-bold">
                         {s.type === 'SEA' 
                           ? (s.inlandMode === 'TRUCK' 
-                              ? (lang === 'ko' ? '해상+트럭' : 'Sea+Truck') 
-                              : (lang === 'ko' ? '해상+철송' : 'Sea+Rail')) 
+                              ? (lang === 'ko' ? '해상+직송트럭' : 'Sea+Truck') 
+                              : (lang === 'ko' ? '해상+화물철송' : 'Sea+Rail')) 
                           : s.type === 'AIR' 
                           ? (lang === 'ko' ? '항공' : 'Air') 
-                          : (lang === 'ko' ? '내륙철도/트럭' : 'Rail/Truck')}
+                          : s.inlandMode === 'TRUCK' || s.type === 'TRUCK'
+                          ? (lang === 'ko' ? '내륙 직송트럭' : 'Direct Truck')
+                          : (lang === 'ko' ? '내륙 화물철송' : 'Inland Rail')}
                       </span>
                     </span>
                   </td>

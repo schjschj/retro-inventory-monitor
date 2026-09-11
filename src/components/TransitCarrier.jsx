@@ -109,17 +109,31 @@ export default function TransitCarrier({
       );
     }
 
-    // Default: Truck
+    // Default: Inland Direct Truck (내륙 직송 싱글 트럭)
     return (
-      <div className="relative group cursor-pointer">
-        <div className="p-1 rounded-sm border bg-[#271d10] border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)] hover:scale-125 transition-transform">
-          <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-            <rect x="2" y="3" width="12" height="9" fill="#fbbf24" />
-            <path d="M14 6H18L21 9V12H14V6Z" fill="#f97316" />
-            <rect x="16" y="7" width="3" height="2" fill="#bae6fd" />
-            <circle cx="5" cy="13" r="1.5" fill="#1e293b" />
-            <circle cx="11" cy="13" r="1.5" fill="#1e293b" />
-            <circle cx="18" cy="13" r="1.5" fill="#1e293b" />
+      <div className="relative group cursor-pointer" title={lang === 'ko' ? '미 내륙 직송트럭 (싱글 트럭)' : 'US Direct Inland Truck'}>
+        <div className="p-1 rounded-sm border bg-[#2c1a0c] border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.5)] hover:scale-125 transition-transform">
+          <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+            {/* Trailer Body */}
+            <rect x="1" y="2" width="13" height="9.5" fill="#f59e0b" rx="0.5" />
+            <rect x="2" y="3" width="11" height="1.5" fill="#fef3c7" opacity="0.6" />
+            <rect x="13" y="7" width="1.5" height="3" fill="#78350f" />
+            
+            {/* Truck Cab */}
+            <path d="M14.5 5H18L21 8.5V11.5H14.5V5Z" fill="#ea580c" />
+            <rect x="16.5" y="6" width="3" height="2.5" fill="#38bdf8" />
+            {/* Headlight */}
+            <rect x="20.5" y="9.5" width="1" height="1.5" fill="#fef08a" />
+            {/* Exhaust Stack */}
+            <rect x="14.8" y="2" width="1" height="3" fill="#94a3b8" />
+            
+            {/* Wheels */}
+            <circle cx="4" cy="13" r="1.8" fill="#0f172a" stroke="#cbd5e1" strokeWidth="0.6" />
+            <circle cx="8" cy="13" r="1.8" fill="#0f172a" stroke="#cbd5e1" strokeWidth="0.6" />
+            <circle cx="17.5" cy="13" r="1.8" fill="#0f172a" stroke="#cbd5e1" strokeWidth="0.6" />
+            <circle cx="4" cy="13" r="0.6" fill="#f8fafc" />
+            <circle cx="8" cy="13" r="0.6" fill="#f8fafc" />
+            <circle cx="17.5" cy="13" r="0.6" fill="#f8fafc" />
           </svg>
         </div>
       </div>

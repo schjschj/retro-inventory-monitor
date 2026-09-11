@@ -8,6 +8,7 @@ import {
   Ship, 
   Plane, 
   Truck, 
+  Train,
   Factory, 
   Building2, 
   FileSpreadsheet, 
@@ -38,6 +39,20 @@ import {
   syncSpeInventory, 
   syncShipments 
 } from '../services/inventoryService';
+
+// Smart Thousand Unit (천 EA / k EA) helpers:
+// Values entered in thousand units (e.g. 18 -> 18,000 EA)
+export const toEA = (val) => {
+  const num = Number(val) || 0;
+  if (num >= 1000) return Math.round(num);
+  return Math.round(num * 1000);
+};
+
+export const toK = (val) => {
+  const num = Number(val) || 0;
+  if (num >= 1000) return Math.round((num / 1000) * 10) / 10;
+  return num;
+};
 
 export default function DataControlModal({
   isOpen,
@@ -78,30 +93,30 @@ export default function DataControlModal({
   const canEditSpe = currentRole === 'USA_LEAD' || currentRole === 'MASTER_ADMIN';
   const canUploadExcel = currentRole === 'MASTER_ADMIN' || currentRole === 'INCHEON_LEAD';
 
-  // Local editable form states for Kokomo and SPE to ensure clean Save actions
+  // Local editable form states for Kokomo and SPE in thousand units (천 EA)
   const [kokomoForm, setKokomoForm] = useState({
-    multiAssy: kokomoInventory.multiAssy,
-    capAssy: kokomoInventory.capAssy,
-    backShip: kokomoInventory.backShip
+    multiAssy: toK(kokomoInventory.multiAssy),
+    capAssy: toK(kokomoInventory.capAssy),
+    backShip: toK(kokomoInventory.backShip)
   });
 
   const [speForm, setSpeForm] = useState({
-    totalInventory: speInventory.totalInventory,
-    dailyConsumption: speInventory.dailyConsumption
+    totalInventory: toK(speInventory.totalInventory),
+    dailyConsumption: toK(speInventory.dailyConsumption)
   });
 
   useEffect(() => {
     setKokomoForm({
-      multiAssy: kokomoInventory.multiAssy,
-      capAssy: kokomoInventory.capAssy,
-      backShip: kokomoInventory.backShip
+      multiAssy: toK(kokomoInventory.multiAssy),
+      capAssy: toK(kokomoInventory.capAssy),
+      backShip: toK(kokomoInventory.backShip)
     });
   }, [kokomoInventory.multiAssy, kokomoInventory.capAssy, kokomoInventory.backShip]);
 
   useEffect(() => {
     setSpeForm({
-      totalInventory: speInventory.totalInventory,
-      dailyConsumption: speInventory.dailyConsumption
+      totalInventory: toK(speInventory.totalInventory),
+      dailyConsumption: toK(speInventory.dailyConsumption)
     });
   }, [speInventory.totalInventory, speInventory.dailyConsumption]);
 
@@ -115,11 +130,13 @@ export default function DataControlModal({
     type: 'SEA',
     vesselName: '',
     containerNo: '',
-    quantity: 5000,
+    quantity: 5, // 5 천 EA (= 5,000 EA)
     departureDate: new Date().toISOString().slice(0, 16),
     eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
     progress: 0,
     isDelayed: false,
+    overlandMode: 'RAIL',
+    inlandMode: 'RAIL',
     origin: '인천신항 (KR)',
     portOfEntry: 'LA 롱비치 항만 (US)',
     destination: '코코모 미주법인 (US)'
@@ -138,6 +155,7 @@ export default function DataControlModal({
     eta: '',
     progress: 0,
     overlandMode: 'RAIL',
+    inlandMode: 'RAIL',
     origin: '',
     portOfEntry: '',
     destination: ''
@@ -147,7 +165,7 @@ export default function DataControlModal({
     id: `LOT-KR-${Date.now().toString().slice(-4)}`,
     product: 'ESS8-1',
     name: 'ESS8-1',
-    quantity: 2000,
+    quantity: 2, // 2 천 EA (= 2,000 EA)
     date: new Date().toISOString().slice(0, 10),
     status: '검사대기',
     note: '공정 완료 수입검사 대기'
@@ -194,16 +212,16 @@ export default function DataControlModal({
     if (!checkPermission('KOKOMO')) return;
     const updated = {
       ...kokomoInventory,
-      multiAssy: Number(kokomoForm.multiAssy) || 0,
-      capAssy: Number(kokomoForm.capAssy) || 0,
-      backShip: Number(kokomoForm.backShip) || 0
+      multiAssy: toEA(kokomoForm.multiAssy),
+      capAssy: toEA(kokomoForm.capAssy),
+      backShip: toEA(kokomoForm.backShip)
     };
     setKokomoInventory(updated);
     sound.playSuccess();
     setUploadMessage({
       type: 'success',
       text: lang === 'ko' 
-        ? `[저장 성공] 미주법인 재고가 클라우드에 영구 저장되었습니다! (Multi: ${Number(kokomoForm.multiAssy).toLocaleString()}, Cap: ${Number(kokomoForm.capAssy).toLocaleString()}, Back: ${Number(kokomoForm.backShip).toLocaleString()} EA)`
+        ? `[저장 성공] 미주법인 재고가 클라우드에 영구 저장되었습니다! (Multi: ${toEA(kokomoForm.multiAssy).toLocaleString()}, Cap: ${toEA(kokomoForm.capAssy).toLocaleString()}, Back: ${toEA(kokomoForm.backShip).toLocaleString()} EA)`
         : `[Success] Kokomo inventory saved to cloud successfully!`
     });
   };
@@ -213,15 +231,15 @@ export default function DataControlModal({
     if (!checkPermission('SPE')) return;
     const updated = {
       ...speInventory,
-      totalInventory: Number(speForm.totalInventory) || 0,
-      dailyConsumption: Number(speForm.dailyConsumption) || 20000
+      totalInventory: toEA(speForm.totalInventory),
+      dailyConsumption: toEA(speForm.dailyConsumption) || 20000
     };
     setSpeInventory(updated);
     sound.playSuccess();
     setUploadMessage({
       type: 'success',
       text: lang === 'ko'
-        ? `[저장 성공] 고객 SPE 재고가 클라우드에 영구 저장되었습니다! (총재고: ${Number(speForm.totalInventory).toLocaleString()} EA, 일일소진: ${Number(speForm.dailyConsumption).toLocaleString()} EA/일)`
+        ? `[저장 성공] 고객 SPE 재고가 클라우드에 영구 저장되었습니다! (총재고: ${toEA(speForm.totalInventory).toLocaleString()} EA, 일일소진: ${toEA(speForm.dailyConsumption).toLocaleString()} EA/일)`
         : `[Success] Customer SPE inventory saved to cloud successfully!`
     });
   };
@@ -260,15 +278,15 @@ export default function DataControlModal({
 
     const updatedKokomo = {
       ...kokomoInventory,
-      multiAssy: Number(kokomoForm.multiAssy) || 0,
-      capAssy: Number(kokomoForm.capAssy) || 0,
-      backShip: Number(kokomoForm.backShip) || 0
+      multiAssy: toEA(kokomoForm.multiAssy),
+      capAssy: toEA(kokomoForm.capAssy),
+      backShip: toEA(kokomoForm.backShip)
     };
 
     const updatedSpe = {
       ...speInventory,
-      totalInventory: Number(speForm.totalInventory) || 0,
-      dailyConsumption: Number(speForm.dailyConsumption) || 20000
+      totalInventory: toEA(speForm.totalInventory),
+      dailyConsumption: toEA(speForm.dailyConsumption) || 20000
     };
 
     // Update state and explicitly trigger persistent sync for all
@@ -307,7 +325,7 @@ export default function DataControlModal({
       const totalQ = remainingLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
       setNewShipment(prev => ({
         ...prev,
-        quantity: totalQ > 0 ? totalQ : 5000
+        quantity: totalQ > 0 ? toK(totalQ) : 5
       }));
     } else {
       const nextIds = [...selectedLotIds, lot.id];
@@ -316,7 +334,7 @@ export default function DataControlModal({
       const totalQ = chosenLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
       setNewShipment(prev => ({
         ...prev,
-        quantity: totalQ,
+        quantity: toK(totalQ),
         batchNo: prev.batchNo || `해상 26-${Date.now().toString().slice(-2)}차`,
         vesselName: prev.vesselName || 'HMM PACIFIC GLORY'
       }));
@@ -332,20 +350,24 @@ export default function DataControlModal({
       return;
     }
 
+    const targetQtyEA = toEA(newShipment.quantity);
     const chosenLots = incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id));
     const items = chosenLots.length > 0
       ? chosenLots.map(l => ({ name: l.name, qty: Number(l.quantity) || 0 }))
       : [
-          { name: 'Multi Assy', qty: Math.round(Number(newShipment.quantity) * 0.6) },
-          { name: 'Cap Assy', qty: Math.round(Number(newShipment.quantity) * 0.4) }
+          { name: 'Multi Assy', qty: Math.round(targetQtyEA * 0.6) },
+          { name: 'Cap Assy', qty: Math.round(targetQtyEA * 0.4) }
         ];
 
     const created = {
       ...newShipment,
       id: `SHIP-${newShipment.type}-${Date.now().toString().slice(-4)}`,
       product: newShipment.product || 'ESS8-1',
-      quantity: Number(newShipment.quantity),
+      quantity: targetQtyEA,
       progress: Number(newShipment.progress),
+      overlandMode: newShipment.overlandMode || (newShipment.type === 'TRUCK' ? 'TRUCK' : 'RAIL'),
+      inlandMode: (newShipment.overlandMode || (newShipment.type === 'TRUCK' ? 'TRUCK' : 'RAIL')) === 'TRUCK' ? 'TRUCK' : 'RAIL',
+      shippingMethod: (newShipment.overlandMode || (newShipment.type === 'TRUCK' ? 'TRUCK' : 'RAIL')) === 'TRUCK' ? '싱글' : '철송',
       items
     };
 
@@ -378,11 +400,13 @@ export default function DataControlModal({
       type: 'SEA',
       vesselName: '',
       containerNo: '',
-      quantity: 5000,
+      quantity: 5, // 5 천 EA (= 5,000 EA)
       departureDate: new Date().toISOString().slice(0, 16),
       eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
       progress: 0,
       isDelayed: false,
+      overlandMode: 'RAIL',
+      inlandMode: 'RAIL',
       origin: '인천신항 (KR)',
       portOfEntry: 'LA 롱비치 항만 (US)',
       destination: '코코모 미주법인 (US)'
@@ -390,7 +414,7 @@ export default function DataControlModal({
     setUploadMessage({
       type: 'success',
       text: lang === 'ko'
-        ? `신규 운송 차수(${created.batchNo})가 등록되었습니다! ${chosenLots.length > 0 ? `(선택된 ${chosenLots.length}개 인천 출하합격 로트 선적 완료)` : ''}`
+        ? `신규 운송 차수(${created.batchNo})가 등록되었습니다! (${toK(targetQtyEA)} 천 EA / ${targetQtyEA.toLocaleString()} EA) ${chosenLots.length > 0 ? `(선택된 ${chosenLots.length}개 인천 출하합격 로트 선적 완료)` : ''}`
         : `New shipment batch (${created.batchNo}) registered successfully!`
     });
   };
@@ -436,7 +460,7 @@ export default function DataControlModal({
       type: s.type || 'SEA',
       vesselName: s.vesselName || '',
       containerNo: s.containerNo || '',
-      quantity: s.quantity || 0,
+      quantity: toK(s.quantity),
       departureDate: s.departureDate ? s.departureDate.slice(0, 16) : '',
       eta: s.eta ? s.eta.slice(0, 16) : '',
       progress: s.progress || 0,
@@ -450,6 +474,7 @@ export default function DataControlModal({
   const handleSaveEditShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playSuccess();
+    const editQtyEA = toEA(editShipmentForm.quantity);
     const mapped = shipments.map(s => {
       if (s.id === id) {
         return {
@@ -459,7 +484,7 @@ export default function DataControlModal({
           type: editShipmentForm.type,
           vesselName: editShipmentForm.vesselName,
           containerNo: editShipmentForm.containerNo,
-          quantity: Math.max(1, Number(editShipmentForm.quantity) || 1),
+          quantity: Math.max(1, editQtyEA || 1),
           departureDate: editShipmentForm.departureDate || s.departureDate,
           eta: editShipmentForm.eta || s.eta,
           progress: Math.min(100, Math.max(0, Number(editShipmentForm.progress) || 0)),
@@ -482,7 +507,7 @@ export default function DataControlModal({
     setEditingShipmentId(null);
     setUploadMessage({
       type: 'success',
-      text: lang === 'ko' ? `[수정 완료] ${editShipmentForm.batchNo} 운송 차수 정보가 성공적으로 수정되었습니다.` : `Shipment ${editShipmentForm.batchNo} updated successfully.`
+      text: lang === 'ko' ? `[수정 완료] ${editShipmentForm.batchNo} 운송 차수 정보가 성공적으로 수정되었습니다. (${toK(editQtyEA)} 천 EA / ${editQtyEA.toLocaleString()} EA)` : `Shipment ${editShipmentForm.batchNo} updated successfully.`
     });
   };
 
@@ -583,6 +608,7 @@ export default function DataControlModal({
     if (!checkPermission('INCHEON')) return;
     sound.playSuccess();
     const prod = newLot.product || 'ESS8-1';
+    const lotQtyEA = toEA(newLot.quantity);
     setIncheonInventory({
       ...incheonInventory,
       waitingInspection: [
@@ -590,7 +616,7 @@ export default function DataControlModal({
           ...newLot, 
           product: prod,
           name: prod,
-          quantity: Number(newLot.quantity) 
+          quantity: lotQtyEA 
         },
         ...incheonInventory.waitingInspection
       ]
@@ -599,10 +625,14 @@ export default function DataControlModal({
       id: `LOT-KR-${Date.now().toString().slice(-4)}`,
       product: prod,
       name: prod,
-      quantity: 2000,
+      quantity: 2, // 2 천 EA (= 2,000 EA)
       date: new Date().toISOString().slice(0, 10),
       status: '검사대기',
       note: '공정 완료'
+    });
+    setUploadMessage({
+      type: 'success',
+      text: lang === 'ko' ? `[등록 완료] 검사대기 로트 ${newLot.id} (${toK(lotQtyEA)} 천 EA / ${lotQtyEA.toLocaleString()} EA)가 등록되었습니다.` : `Lot ${newLot.id} registered successfully.`
     });
   };
 
@@ -733,7 +763,9 @@ export default function DataControlModal({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-cyan-400 animate-pulse"></span>
             <h2 className="text-sm md:text-base font-bold text-cyan-300">
-              [데이터 통제 센터] 재고 관리 & 엑셀 입출력
+              {lang === 'en' 
+                ? '[DATA CONTROL CENTER] Inventory & Dispatches · Unit: k EA' 
+                : '[데이터 통제 센터] 재고 관리 & 물류 통제 · 단위: 천 EA (k EA)'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -948,7 +980,7 @@ export default function DataControlModal({
                     </div>
                     {incheonInventory.passedInspection.length > 0 && (
                       <span className="text-[10px] text-slate-300 font-mono">
-                        {lang === 'en' ? 'Available Stock:' : '선적 대기 합계:'} <b className="text-emerald-400">{incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()}</b> EA
+                        {lang === 'en' ? 'Available Stock:' : '선적 대기 합계:'} <b className="text-emerald-400">{toK(incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))}</b> 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
                       </span>
                     )}
                   </div>
@@ -974,14 +1006,14 @@ export default function DataControlModal({
                               onClick={() => handleToggleSelectLot(lot)}
                               className={`px-2 py-1 rounded text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
                                 isSelected 
-                                  ? 'bg-emerald-800 text-white border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-300' 
+                                   ? 'bg-emerald-800 text-white border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] ring-1 ring-emerald-300' 
                                   : 'bg-[#122338] text-cyan-200 border-cyan-700 hover:border-cyan-400 hover:bg-[#18314e]'
                               }`}
                             >
                               <span>{isSelected ? '✓' : '+'}</span>
                               <span className="font-mono">{lot.id}</span>
                               <span className="text-slate-300 font-normal">({lot.name})</span>
-                              <span className="text-amber-300 font-mono">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
+                              <span className="text-amber-300 font-mono">{toK(lot.quantity)} 천 EA</span>
                             </button>
                           );
                         })}
@@ -989,7 +1021,7 @@ export default function DataControlModal({
 
                       {selectedLotIds.length > 0 && (
                         <div className="pt-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[10.5px] text-emerald-300 border-t border-cyan-900/80">
-                          <span>✅ {selectedLotIds.length}개 로트 선택됨 (총 {incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0).toLocaleString()} EA 적재)</span>
+                          <span>✅ {selectedLotIds.length}개 로트 선택됨 (총 {toK(incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0))} 천 EA / {incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0).toLocaleString()} EA 적재)</span>
                           <label className="flex items-center gap-1.5 text-slate-200 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1060,15 +1092,34 @@ export default function DataControlModal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-[10px] mb-1">적재 수량 (EA)</label>
+                    <div className="flex items-center justify-between text-[10px] mb-1">
+                      <label className="text-slate-400">적재 수량 (천 EA)</label>
+                      <span className="text-cyan-400 font-mono">(= {toEA(newShipment.quantity).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
+                      placeholder="예: 5 (= 5,000 EA)"
                       value={newShipment.quantity}
                       onChange={e => setNewShipment({ ...newShipment, quantity: e.target.value })}
                       disabled={!canEditShipments}
                       className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
-                      min="1"
+                      min="0.001"
+                      required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] mb-1">미 내륙 연계운송</label>
+                    <select
+                      value={newShipment.overlandMode || 'RAIL'}
+                      onChange={e => setNewShipment({ ...newShipment, overlandMode: e.target.value, inlandMode: e.target.value })}
+                      disabled={!canEditShipments}
+                      className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
+                    >
+                      <option value="RAIL">🚂 화물철송 (RAIL)</option>
+                      <option value="TRUCK">🚛 직송트럭 (TRUCK)</option>
+                    </select>
                   </div>
 
                   <div>
@@ -1204,14 +1255,30 @@ export default function DataControlModal({
                           </div>
 
                           <div>
-                            <label className="block text-slate-400 text-[10px] mb-1">적재 수량 (EA)</label>
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                              <label className="text-slate-400">적재 수량 (천 EA)</label>
+                              <span className="text-amber-400 font-mono">(= {toEA(editShipmentForm.quantity).toLocaleString()} EA)</span>
+                            </div>
                             <input
                               type="number"
+                              step="0.1"
                               value={editShipmentForm.quantity}
                               onChange={e => setEditShipmentForm({ ...editShipmentForm, quantity: e.target.value })}
                               className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
-                              min="1"
+                              min="0.001"
                             />
+                          </div>
+
+                          <div>
+                            <label className="block text-slate-400 text-[10px] mb-1">미 내륙 연계운송</label>
+                            <select
+                              value={editShipmentForm.overlandMode || 'RAIL'}
+                              onChange={e => setEditShipmentForm({ ...editShipmentForm, overlandMode: e.target.value })}
+                              className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
+                            >
+                              <option value="RAIL">🚂 화물철송 (RAIL)</option>
+                              <option value="TRUCK">🚛 직송트럭 (TRUCK)</option>
+                            </select>
                           </div>
 
                           <div>
@@ -1279,13 +1346,42 @@ export default function DataControlModal({
                       <div key={s.id} className="p-3 bg-[#0d1624] border border-slate-700 rounded flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-[#17253b] border border-slate-600">
-                            {s.type === 'SEA' ? <Ship className="w-5 h-5 text-cyan-400" /> : s.type === 'AIR' ? <Plane className="w-5 h-5 text-sky-400" /> : <Truck className="w-5 h-5 text-amber-400" />}
+                            {s.type === 'SEA' ? (
+                              s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
+                                <div className="flex items-center gap-0.5" title="해상 + 미내륙 직송트럭">
+                                  <Ship className="w-4 h-4 text-cyan-400" />
+                                  <Truck className="w-3.5 h-3.5 text-amber-400" />
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5" title="해상 + 미내륙 화물철송">
+                                  <Ship className="w-4 h-4 text-cyan-400" />
+                                  <Train className="w-3.5 h-3.5 text-emerald-400" />
+                                </div>
+                              )
+                            ) : s.type === 'AIR' ? (
+                              <Plane className="w-5 h-5 text-sky-400" />
+                            ) : s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
+                              <Truck className="w-5 h-5 text-amber-400" />
+                            ) : (
+                              <Train className="w-5 h-5 text-emerald-400" />
+                            )}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-white text-sm">{s.batchNo}</span>
                               <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 border border-slate-600 text-slate-300">
                                 {s.vesselName} ({s.containerNo})
+                              </span>
+                              <span className={`text-[10px] px-1.5 py-0.2 border font-bold flex items-center gap-1 ${
+                                s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK'
+                                  ? 'bg-amber-950/80 border-amber-500 text-amber-300'
+                                  : 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                              }`}>
+                                {s.inlandMode === 'TRUCK' || s.overlandMode === 'TRUCK' ? (
+                                  <><Truck className="w-3 h-3 text-amber-400" /> 직송트럭</>
+                                ) : (
+                                  <><Train className="w-3 h-3 text-emerald-400" /> 화물철송</>
+                                )}
                               </span>
                               {s.isDelayed && (
                                 <span className="text-[10px] px-1.5 py-0.2 bg-rose-950 border border-rose-500 text-rose-400 font-bold animate-pulse">
@@ -1294,7 +1390,7 @@ export default function DataControlModal({
                               )}
                             </div>
                             <div className="text-[11px] text-slate-400 mt-0.5">
-                              적재량: <span className="text-amber-300 font-bold">{s.quantity.toLocaleString()} EA</span> | ETA: {s.eta.slice(0, 16).replace('T', ' ')}
+                              적재량: <span className="text-amber-300 font-bold">{toK(s.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(s.quantity) || 0).toLocaleString()} EA)</span> | ETA: {s.eta ? s.eta.slice(0, 16).replace('T', ' ') : '-'}
                             </div>
                           </div>
                         </div>
@@ -1428,14 +1524,19 @@ export default function DataControlModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-slate-400 text-[10px] mb-1">수량 (EA)</label>
+                    <div className="flex items-center justify-between text-[10px] mb-1">
+                      <label className="text-slate-400">수량 (천 EA)</label>
+                      <span className="text-cyan-400 font-mono">(= {toEA(newLot.quantity).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
+                      placeholder="예: 2 (= 2,000 EA)"
                       value={newLot.quantity}
                       onChange={e => setNewLot({ ...newLot, quantity: e.target.value })}
                       disabled={!canEditIncheon}
                       className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
-                      min="1"
+                      min="0.001"
                       required
                     />
                   </div>
@@ -1462,7 +1563,7 @@ export default function DataControlModal({
                       <Clock className="w-4 h-4" /> 검사대기 목록
                     </span>
                     <span className="text-[10px] text-amber-400">
-                      총 {incheonInventory.waitingInspection.reduce((a, b) => a + b.quantity, 0).toLocaleString()} EA
+                      총 {toK(incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))} 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1471,7 +1572,7 @@ export default function DataControlModal({
                         <div className="min-w-0 flex-1 pr-1">
                           <div className="text-white font-bold text-xs truncate">{lot.id}</div>
                           <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-amber-300 font-semibold">{lot.quantity.toLocaleString()} EA</span>
+                            {lot.name} | <span className="text-amber-300 font-semibold">{toK(lot.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(lot.quantity) || 0).toLocaleString()} EA)</span>
                           </div>
                         </div>
                         <button
@@ -1496,7 +1597,7 @@ export default function DataControlModal({
                       <CheckCircle className="w-4 h-4" /> 출하합격 (선적 준비완료)
                     </span>
                     <span className="text-[10px] text-emerald-400">
-                      총 {incheonInventory.passedInspection.reduce((a, b) => a + b.quantity, 0).toLocaleString()} EA
+                      총 {toK(incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))} 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1505,7 +1606,7 @@ export default function DataControlModal({
                         <div className="min-w-0 flex-1 pr-1">
                           <div className="text-white font-bold text-xs truncate">{lot.id}</div>
                           <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-emerald-300 font-semibold">{lot.quantity.toLocaleString()} EA</span>
+                            {lot.name} | <span className="text-emerald-300 font-semibold">{toK(lot.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(lot.quantity) || 0).toLocaleString()} EA)</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1575,9 +1676,13 @@ export default function DataControlModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div>
-                    <label className="block text-cyan-300 text-[11px] mb-1 font-bold">Multi Assy 수량 (EA)</label>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <label className="text-cyan-300 font-bold">Multi Assy 수량 (천 EA)</label>
+                      <span className="text-cyan-400 font-mono text-[10px]">(= {toEA(kokomoForm.multiAssy).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
                       value={kokomoForm.multiAssy}
                       onChange={e => setKokomoForm({ ...kokomoForm, multiAssy: e.target.value })}
                       disabled={!canEditKokomo}
@@ -1589,9 +1694,13 @@ export default function DataControlModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-emerald-300 text-[11px] mb-1 font-bold">Cap Assy 수량 (EA)</label>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <label className="text-emerald-300 font-bold">Cap Assy 수량 (천 EA)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(kokomoForm.capAssy).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
                       value={kokomoForm.capAssy}
                       onChange={e => setKokomoForm({ ...kokomoForm, capAssy: e.target.value })}
                       disabled={!canEditKokomo}
@@ -1603,9 +1712,13 @@ export default function DataControlModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-rose-300 text-[11px] mb-1 font-bold">Back ship 수량 (EA)</label>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <label className="text-rose-300 font-bold">Back ship 수량 (천 EA)</label>
+                      <span className="text-rose-400 font-mono text-[10px]">(= {toEA(kokomoForm.backShip).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
                       value={kokomoForm.backShip}
                       onChange={e => setKokomoForm({ ...kokomoForm, backShip: e.target.value })}
                       disabled={!canEditKokomo}
@@ -1620,7 +1733,7 @@ export default function DataControlModal({
 
                 <div className="flex items-center justify-between text-[11px] text-amber-300/80 pt-1">
                   <span>* 미주법인 전체 재고는 세 품목의 합계로 지도 및 상단 HUD에 자동 반영됩니다.</span>
-                  <span className="font-bold text-amber-300">합계: {((Number(kokomoForm.multiAssy) || 0) + (Number(kokomoForm.capAssy) || 0) + (Number(kokomoForm.backShip) || 0)).toLocaleString()} EA</span>
+                  <span className="font-bold text-amber-300">합계: {toK(toEA(kokomoForm.multiAssy) + toEA(kokomoForm.capAssy) + toEA(kokomoForm.backShip))} 천 EA <span className="text-slate-400 font-normal">({(toEA(kokomoForm.multiAssy) + toEA(kokomoForm.capAssy) + toEA(kokomoForm.backShip)).toLocaleString()} EA)</span></span>
                 </div>
               </div>
 
@@ -1635,9 +1748,13 @@ export default function DataControlModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-slate-300 text-[11px] mb-1 font-bold">고객 보유 총재고 (EA)</label>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <label className="text-slate-300 font-bold">고객 보유 총재고 (천 EA)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(speForm.totalInventory).toLocaleString()} EA)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
                       value={speForm.totalInventory}
                       onChange={e => setSpeForm({ ...speForm, totalInventory: e.target.value })}
                       disabled={!canEditSpe}
@@ -1649,9 +1766,13 @@ export default function DataControlModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-300 text-[11px] mb-1 font-bold">일일 소진량 (EA/일)</label>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <label className="text-slate-300 font-bold">일일 소진율 (천 EA/일)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(speForm.dailyConsumption).toLocaleString()} EA/일)</span>
+                    </div>
                     <input
                       type="number"
+                      step="0.1"
                       value={speForm.dailyConsumption}
                       onChange={e => setSpeForm({ ...speForm, dailyConsumption: e.target.value })}
                       disabled={!canEditSpe}
@@ -1666,7 +1787,7 @@ export default function DataControlModal({
 
                 <div className="text-[11px] text-emerald-400/80 pt-1">
                   * 고객 생산라인 잔여 가동 가능일: <span className="font-bold text-amber-300">
-                    {Number(speForm.dailyConsumption) > 0 ? (Number(speForm.totalInventory) / Number(speForm.dailyConsumption)).toFixed(1) : 0}일분
+                    {toEA(speForm.dailyConsumption) > 0 ? (toEA(speForm.totalInventory) / toEA(speForm.dailyConsumption)).toFixed(1) : 0}일분
                   </span>
                 </div>
               </div>
