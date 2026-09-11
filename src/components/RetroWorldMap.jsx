@@ -207,13 +207,13 @@ export default function RetroWorldMap({
           {/* Korean Country Label */}
           <rect x="166" y="285" width="60" height="15" fill={mapTheme.koreaTextBg} rx="2" stroke={mapTheme.koreaStroke} strokeWidth="0.8" />
           <text x="196" y="296" fill={mapTheme.koreaTextColor} fontSize="9.5" fontFamily="sans-serif" fontWeight="900" textAnchor="middle">
-            대한민국
+            {lang === 'en' ? 'KOREA' : '대한민국'}
           </text>
           <text x="235" y="360" fill={mapTheme.seaLabelColor} fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity={isLight ? 0.95 : 0.8}>
-            동해
+            {lang === 'en' ? 'East Sea' : '동해'}
           </text>
           <text x="140" y="350" fill={mapTheme.seaLabelColor} fontSize="8.5" fontFamily="sans-serif" fontWeight="bold" opacity={isLight ? 0.95 : 0.8}>
-            서해(황해)
+            {lang === 'en' ? 'West Sea' : '서해(황해)'}
           </text>
         </g>
 
@@ -242,7 +242,7 @@ export default function RetroWorldMap({
           {/* Hokkaido */}
           <path d="M 368,282 L 398,252 L 418,258 L 402,292 L 375,295 Z" />
           <text x="315" y="395" fill={mapTheme.japanTextColor} fontSize="9" fontFamily="sans-serif" fontWeight="bold">
-            일본
+            {lang === 'en' ? 'JAPAN' : '일본'}
           </text>
         </g>
 
@@ -250,13 +250,10 @@ export default function RetroWorldMap({
         {/* 4. NORTH PACIFIC OCEAN FEATURES                          */}
         {/* ======================================================== */}
         <g stroke={mapTheme.landStroke} strokeWidth="1" fill={mapTheme.landFill}>
-          {/* Hawaiian Islands */}
+          {/* Hawaiian Islands (Label removed as requested) */}
           <ellipse cx="680" cy="455" rx="5" ry="3" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
           <ellipse cx="700" cy="462" rx="6" ry="3.5" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
           <ellipse cx="720" cy="470" rx="7" ry="4.5" fill={mapTheme.hawaiiFill} stroke={mapTheme.hawaiiStroke} />
-          <text x="735" y="475" fill={mapTheme.seaLabelColor} fontSize="10" fontFamily="monospace" fontWeight="bold">
-            HAWAII
-          </text>
 
           {/* Aleutian Chain */}
           <circle cx="510" cy="180" r="2.5" />

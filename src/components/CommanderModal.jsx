@@ -7,10 +7,12 @@ export default function CommanderModal({
   commanderType, // 'INCHEON' | 'KOKOMO'
   onClose,
   lang = 'ko',
-  commanderPhotos
+  commanderPhotos,
+  themeMode = 'light'
 }) {
   if (!isOpen || !commanderType) return null;
 
+  const isLight = themeMode === 'light';
   const isUsa = commanderType === 'KOKOMO';
 
   const data = isUsa ? {
@@ -19,10 +21,10 @@ export default function CommanderModal({
     dept: lang === 'ko' ? '미주법인 본부 (Indiana Kokomo)' : 'US Headquarters (Indiana Kokomo)',
     image: commanderPhotos?.KOKOMO || '/assets/commander_usa.png',
     themeColor: 'amber',
-    borderColor: 'border-amber-400',
-    textColor: 'text-amber-300',
+    borderColor: isLight ? 'border-amber-400' : 'border-amber-400',
+    textColor: isLight ? 'text-amber-800 font-bold' : 'text-amber-300',
     glowColor: 'shadow-[0_0_35px_rgba(251,191,36,0.45)]',
-    badgeBg: 'bg-amber-950 border-amber-500 text-amber-300',
+    badgeBg: isLight ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-amber-950 border-amber-500 text-amber-300',
     callsign: 'KOKOMO-LEAD-01',
     mission: lang === 'ko' 
       ? '미국 인디애나 코코모 거점 생산/물류 라인 총괄 및 고객사(SPE) 적기 공급 관리'
@@ -43,10 +45,10 @@ export default function CommanderModal({
     dept: lang === 'ko' ? '영업관리 및 출하계획본부 (대한민국 인천)' : 'Global Sales & Planning HQ (Incheon, KR)',
     image: commanderPhotos?.INCHEON || '/assets/commander_incheon.png',
     themeColor: 'cyan',
-    borderColor: 'border-cyan-400',
-    textColor: 'text-cyan-300',
+    borderColor: isLight ? 'border-blue-400' : 'border-cyan-400',
+    textColor: isLight ? 'text-blue-800 font-bold' : 'text-cyan-300',
     glowColor: 'shadow-[0_0_35px_rgba(0,240,255,0.45)]',
-    badgeBg: 'bg-cyan-950 border-cyan-500 text-cyan-300',
+    badgeBg: isLight ? 'bg-blue-100 border-blue-300 text-blue-900' : 'bg-cyan-950 border-cyan-500 text-cyan-300',
     callsign: 'INCHEON-LEAD-01',
     mission: lang === 'ko'
       ? '대한민국 인천 거점 검사대기·출하합격 로트 판정 및 태평양 횡단 해상/항공 선적 관리'
@@ -66,14 +68,20 @@ export default function CommanderModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-mono animate-fadeIn">
       <div 
-        className={`pixel-box bg-[#090f1d] border-2 ${data.borderColor} w-full max-w-lg ${data.glowColor} relative overflow-hidden`}
+        className={`pixel-box border-2 ${data.borderColor} w-full max-w-lg relative overflow-hidden rounded-md shadow-2xl ${
+          isLight ? 'bg-white' : `bg-[#090f1d] ${data.glowColor}`
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Tactical Banner */}
-        <div className="bg-[#111e35] px-4 py-2.5 border-b border-slate-700 flex items-center justify-between">
+        <div className={`px-4 py-2.5 border-b flex items-center justify-between ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#111e35] border-slate-700'
+        }`}>
           <div className="flex items-center gap-2">
             <Radio className={`w-4 h-4 ${data.textColor} animate-pulse`} />
-            <span className="text-[11px] font-black text-slate-200 tracking-wider">
+            <span className={`text-[11px] font-black tracking-wider ${
+              isLight ? 'text-slate-900' : 'text-slate-200'
+            }`}>
               {lang === 'ko' ? '거점 책임자 프로필 (STATION LEAD DOSSIER)' : 'STATION LEAD DOSSIER'}
             </span>
             <span className={`text-[9px] px-1.5 py-0.2 border ${data.badgeBg} font-bold rounded`}>
@@ -85,7 +93,9 @@ export default function CommanderModal({
               sound.playClick();
               onClose();
             }}
-            className="p-1 hover:bg-[#1f3150] text-slate-400 hover:text-white rounded transition-colors"
+            className={`p-1 rounded transition-colors ${
+              isLight ? 'hover:bg-slate-200 text-slate-500 hover:text-slate-800' : 'hover:bg-[#1f3150] text-slate-400 hover:text-white'
+            }`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,7 +109,7 @@ export default function CommanderModal({
             
             {/* Photo Box with Military Reticle Frame */}
             <div className="relative group flex-shrink-0">
-              <div className={`w-36 h-48 sm:w-40 sm:h-52 bg-[#060a14] border-2 ${data.borderColor} p-1 relative shadow-lg overflow-hidden`}>
+              <div className={`w-36 h-48 sm:w-40 sm:h-52 ${isLight ? 'bg-slate-100' : 'bg-[#060a14]'} border-2 ${data.borderColor} p-1 relative shadow-md overflow-hidden rounded-xs`}>
                 <img 
                   src={data.image} 
                   alt={data.title}
@@ -131,16 +141,16 @@ export default function CommanderModal({
                     {data.rank}
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <h2 className={`text-xl sm:text-2xl font-black ${isLight ? 'text-slate-900' : 'text-white'} tracking-tight`}>
                   {data.title}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
                   {data.dept}
                 </p>
               </div>
 
               {/* Mission Statement */}
-              <div className="p-2.5 bg-[#0b1424] border border-slate-800 text-[11px] text-slate-300 leading-relaxed">
+              <div className={`p-2.5 ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-[#0b1424] border-slate-800 text-slate-300'} border text-[11px] leading-relaxed rounded`}>
                 <span className={`font-bold ${data.textColor} block mb-0.5`}>
                   {lang === 'ko' ? '▶ 주요 담당 업무:' : '▶ Key Responsibilities:'}
                 </span>
@@ -148,13 +158,13 @@ export default function CommanderModal({
               </div>
 
               {/* Responsibilities list */}
-              <div className="space-y-1 text-[10px] text-slate-300">
-                <span className="text-slate-400 font-bold block">
+              <div className={`space-y-1 text-[10px] ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                <span className={`${isLight ? 'text-slate-600' : 'text-slate-400'} font-bold block`}>
                   {lang === 'ko' ? '주요 승인 및 관리 업무:' : 'Key Authorizations & Management:'}
                 </span>
                 {data.responsibilities.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-1.5 text-left">
-                    <CheckCircle2 className={`w-3 h-3 ${data.textColor} flex-shrink-0 mt-0.5`} />
+                    <CheckCircle2 className={`w-3 h-3 ${isLight ? (isUsa ? 'text-amber-600' : 'text-blue-600') : data.textColor} flex-shrink-0 mt-0.5`} />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -164,13 +174,17 @@ export default function CommanderModal({
           </div>
 
           {/* Bottom Close Button */}
-          <div className="pt-2 border-t border-slate-800 flex justify-end">
+          <div className={`pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800'} flex justify-end`}>
             <button
               onClick={() => {
                 sound.playClick();
                 onClose();
               }}
-              className={`px-5 py-2 bg-gradient-to-r ${isUsa ? 'from-amber-800 to-amber-700 hover:from-amber-700 hover:to-amber-600 border-amber-400 text-amber-100' : 'from-cyan-800 to-cyan-700 hover:from-cyan-700 hover:to-cyan-600 border-cyan-400 text-cyan-100'} font-bold border text-xs shadow-md active:scale-95 transition-all`}
+              className={`px-5 py-2 font-bold border text-xs shadow-sm active:scale-95 transition-all rounded ${
+                isLight 
+                  ? (isUsa ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-700' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700') 
+                  : (isUsa ? 'bg-gradient-to-r from-amber-800 to-amber-700 border-amber-400 text-amber-100' : 'bg-gradient-to-r from-cyan-800 to-cyan-700 border-cyan-400 text-cyan-100')
+              }`}
             >
               {lang === 'ko' ? '확인 닫기' : 'Close Dossier'}
             </button>

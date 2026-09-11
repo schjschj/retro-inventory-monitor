@@ -77,20 +77,20 @@ export default function NodeOverlay({
             <Factory className="w-5 h-5" />
           </div>
 
-          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-lg border ${
+          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-md border ${
             isLight 
-              ? 'bg-white border-slate-300' 
+              ? 'bg-blue-50/95 border-blue-300' 
               : 'bg-[#091322] border-cyan-400/80'
           }`}>
             <div className={`text-[10px] font-mono font-black tracking-wider ${
-              isLight ? 'text-blue-700' : 'text-cyan-300'
+              isLight ? 'text-blue-800' : 'text-cyan-300'
             }`}>
               {t('incheonName', lang)}
             </div>
-            <div className={`text-[11px] font-mono font-bold ${
-              isLight ? 'text-slate-900' : 'text-white'
+            <div className={`text-[11px] font-mono font-black ${
+              isLight ? 'text-blue-950' : 'text-white'
             }`}>
-              {incheonTotal.toLocaleString()} <span className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>EA</span>
+              {incheonTotal.toLocaleString()} <span className={`text-[9px] font-bold ${isLight ? 'text-blue-700' : 'text-slate-300'}`}>EA</span>
             </div>
           </div>
 
@@ -255,7 +255,7 @@ export default function NodeOverlay({
             <Anchor className="w-3.5 h-3.5" />
           </div>
           <span className={`text-[10px] font-mono font-bold mt-0.5 whitespace-nowrap px-1.5 py-0.2 border rounded shadow-md ${
-            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-black/90 border-cyan-500 text-cyan-300'
+            isLight ? 'bg-blue-50/95 border-blue-300 text-blue-950' : 'bg-black/90 border-cyan-500 text-cyan-300'
           }`}>
             {t('longBeachName', lang)}
           </span>
@@ -279,7 +279,7 @@ export default function NodeOverlay({
             <Plane className="w-3 h-3" />
           </div>
           <span className={`text-[9px] font-mono font-bold mt-0.5 whitespace-nowrap px-1.5 py-0.2 border rounded shadow-md ${
-            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-black/90 border-slate-700 text-slate-300'
+            isLight ? 'bg-indigo-50/95 border-indigo-300 text-indigo-950' : 'bg-black/90 border-slate-700 text-slate-300'
           }`}>
             {t('chicagoName', lang)}
           </span>
@@ -316,9 +316,9 @@ export default function NodeOverlay({
             <Building2 className="w-5 h-5" />
           </div>
 
-          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-lg border ${
+          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-md border ${
             isLight 
-              ? 'bg-white border-slate-300' 
+              ? 'bg-amber-50/95 border-amber-300' 
               : 'bg-[#171107] border-amber-400/80'
           }`}>
             <div className={`text-[10px] font-mono font-black tracking-wider ${
@@ -327,9 +327,9 @@ export default function NodeOverlay({
               {t('kokomoName', lang)}
             </div>
             <div className={`text-[11px] font-mono font-black ${
-              isLight ? 'text-slate-900' : 'text-white'
+              isLight ? 'text-amber-950' : 'text-white'
             }`}>
-              {kokomoTotal.toLocaleString()} <span className={`text-[9px] ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>{t('kokomoTotalTag', lang)}</span>
+              {kokomoTotal.toLocaleString()} <span className={`text-[9px] font-bold ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>{t('kokomoTotalTag', lang)}</span>
             </div>
           </div>
 
@@ -501,9 +501,9 @@ export default function NodeOverlay({
             <ShieldCheck className="w-5 h-5" />
           </div>
 
-          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-lg border ${
+          <div className={`mt-1 px-2.5 py-0.5 rounded-sm text-center shadow-md border ${
             isLight 
-              ? 'bg-white border-slate-300' 
+              ? 'bg-emerald-50/95 border-emerald-300' 
               : 'bg-[#07170f] border-emerald-400/80'
           }`}>
             <div className={`text-[10px] font-mono font-black tracking-wider ${
@@ -511,10 +511,10 @@ export default function NodeOverlay({
             }`}>
               {t('speName', lang)}
             </div>
-            <div className={`text-[11px] font-mono font-bold ${
-              isLight ? 'text-slate-900' : 'text-white'
+            <div className={`text-[11px] font-mono font-black ${
+              isLight ? 'text-emerald-950' : 'text-white'
             }`}>
-              {Number(speInventory.totalInventory).toLocaleString()} <span className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-300'}`}>EA</span>
+              {Number(speInventory.totalInventory).toLocaleString()} <span className={`text-[9px] font-bold ${isLight ? 'text-emerald-700' : 'text-slate-300'}`}>EA</span>
             </div>
           </div>
 
@@ -578,6 +578,7 @@ export default function NodeOverlay({
         onClose={() => setModalCommander(null)}
         lang={lang}
         commanderPhotos={commanderPhotos}
+        themeMode={themeMode}
       />
     </>
   );

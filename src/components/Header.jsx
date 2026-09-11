@@ -288,10 +288,10 @@ export default function Header({
               className={`px-2 py-0.5 flex items-center justify-center gap-1 border transition-colors whitespace-nowrap text-[11px] font-bold rounded ${
                 isPaused 
                   ? isLight 
-                    ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm' 
+                    ? 'bg-slate-100 border-slate-300 text-slate-700 shadow-xs' 
                     : 'bg-amber-500/20 border-amber-400 text-amber-300' 
                   : isLight 
-                    ? 'bg-emerald-100 border-emerald-500 text-emerald-900 shadow-sm font-black' 
+                    ? 'bg-amber-100/90 border-amber-300 text-amber-900 shadow-xs font-bold' 
                     : 'bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
               }`}
               title={isPaused ? "Play" : "Pause"}
@@ -311,7 +311,7 @@ export default function Header({
                 className={`px-1.5 py-0.5 border transition-colors text-[11px] font-bold text-center rounded whitespace-nowrap ${
                   timeSpeed === opt.value
                     ? isLight 
-                      ? 'bg-blue-600 border-blue-700 text-white shadow-sm font-black' 
+                      ? 'bg-sky-100 border-sky-300 text-sky-900 shadow-xs font-bold' 
                       : 'bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,240,255,0.35)]'
                     : isLight 
                       ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
@@ -386,7 +386,7 @@ export default function Header({
             className={`px-2 py-0.5 text-[11px] font-mono border rounded flex items-center justify-center gap-1 transition-all whitespace-nowrap ${
               isHudVisible
                 ? isLight 
-                  ? 'bg-blue-600 border-blue-700 text-white shadow-sm font-black' 
+                  ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-xs font-bold' 
                   : 'bg-cyan-950/80 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,240,255,0.25)]'
                 : isLight 
                   ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
@@ -404,9 +404,9 @@ export default function Header({
               sound.playClick();
               onOpenDataModal();
             }}
-            className={`px-2.5 py-0.5 text-[11px] font-bold font-mono border rounded flex items-center justify-center gap-1 hover:brightness-105 active:scale-95 transition-all whitespace-nowrap shadow-sm ${
+            className={`px-2.5 py-0.5 text-[11px] font-bold font-mono border rounded flex items-center justify-center gap-1 hover:brightness-105 active:scale-95 transition-all whitespace-nowrap shadow-xs ${
               isLight 
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-700 text-white' 
+                ? 'bg-emerald-100 hover:bg-emerald-200 border-emerald-300 text-emerald-900' 
                 : 'bg-gradient-to-r from-emerald-900 to-teal-900 border-emerald-400/80 text-emerald-200 hover:text-white shadow-[0_0_8px_rgba(16,185,129,0.3)]'
             }`}
           >

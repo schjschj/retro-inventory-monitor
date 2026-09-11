@@ -58,14 +58,15 @@ export const KEY_NODES = {
   }
 };
 
-// Pure Maritime Waypoints: Incheon Port -> West Sea -> Korea Strait -> Pacific -> Long Beach Harbor
+// Pure Maritime Waypoints: Incheon Port -> West Sea -> South of Japan -> Pacific -> Long Beach Harbor
 export const SEA_WAYPOINTS = [
   { x: 180, y: 325 }, // Incheon Port (sea level)
   { x: 165, y: 360 }, // West Sea (Yellow Sea) offshore
   { x: 165, y: 395 }, // West Sea south of Mokpo
-  { x: 195, y: 425 }, // South Sea / Jeju Strait
-  { x: 235, y: 420 }, // Korea/Tsushima Strait (between Busan and Kyushu)
-  { x: 330, y: 430 }, // South of Japan into Pacific
+  { x: 195, y: 430 }, // South Sea / Jeju Strait
+  { x: 235, y: 448 }, // South of Korea, rounding cleanly below Kyushu
+  { x: 290, y: 450 }, // Pacific waters south of Shikoku
+  { x: 360, y: 445 }, // Pacific waters south of Honshu (clear of land)
   { x: 470, y: 415 }, // North Pacific maritime highway
   { x: 700, y: 380 }, // Mid-Pacific
   { x: 940, y: 370 }, // East Pacific

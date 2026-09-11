@@ -391,16 +391,18 @@ export default function InventorySummaryHud({
                     isLight ? 'text-slate-600 border-slate-200' : 'text-slate-400 border-slate-800/60'
                   }`}>
                     <div className="flex justify-between items-center">
-                      <span>해상/항공 운송중: {activeTransitShipments.length}건</span>
+                      <span>{lang === 'en' ? `Active In-Transit: ${activeTransitShipments.length}` : `해상/항공 운송중: ${activeTransitShipments.length}건`}</span>
                       {pendingShipments.length > 0 && (
                         <span className={`font-bold ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
-                          (출항대기 {pendingShipments.length}건 제외)
+                          {lang === 'en' ? `(Excl. ${pendingShipments.length} Pending)` : `(출항대기 ${pendingShipments.length}건 제외)`}
                         </span>
                       )}
                     </div>
                     {arrivedShipments.length > 0 && (
                       <span className={`font-mono ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
-                        코코모 입고완료: {arrivedShipments.length}건 (-{arrivedTotal.toLocaleString()} EA 이동)
+                        {lang === 'en' 
+                          ? `Delivered to Kokomo: ${arrivedShipments.length} (-${arrivedTotal.toLocaleString()} EA moved)` 
+                          : `코코모 입고완료: ${arrivedShipments.length}건 (-${arrivedTotal.toLocaleString()} EA 이동)`}
                       </span>
                     )}
                   </div>
@@ -450,8 +452,8 @@ export default function InventorySummaryHud({
                   <div className={`text-[9px] pl-6 flex justify-between pt-0.5 border-t mt-1 font-mono ${
                     isLight ? 'text-amber-800 border-amber-200' : 'text-amber-400/90 border-amber-900/40'
                   }`}>
-                    <span>기본: {((Number(kokomoInventory.baseTotal) || (kokomoTotal - arrivedTotal))).toLocaleString()} EA</span>
-                    <span className={`font-bold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>+철송입고: +{arrivedTotal.toLocaleString()} EA</span>
+                    <span>{lang === 'en' ? 'Base: ' : '기본: '}{((Number(kokomoInventory.baseTotal) || (kokomoTotal - arrivedTotal))).toLocaleString()} EA</span>
+                    <span className={`font-bold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>{lang === 'en' ? '+Rail Received: ' : '+철송입고: '}+{arrivedTotal.toLocaleString()} EA</span>
                   </div>
                 )}
               </div>
