@@ -24,6 +24,7 @@ import {
   subscribeToRealtimeUpdates 
 } from './services/inventoryService';
 import { isSupabaseConfigured } from './utils/supabaseClient';
+import { normalizeKokomoInventory, normalizeSpeInventory } from './utils/inventoryNormalization';
 
 export default function App() {
   // Global Data State (Cached in LocalStorage for instant persistence)
@@ -44,22 +45,18 @@ export default function App() {
   const [kokomoInventory, setKokomoInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('tactical_kokomo_inventory');
-      if (saved) return JSON.parse(saved);
+      if (saved) return normalizeKokomoInventory(JSON.parse(saved));
     } catch (e) {}
-    return INITIAL_KOKOMO_INVENTORY;
+    return normalizeKokomoInventory(INITIAL_KOKOMO_INVENTORY);
   });
   const [speInventory, setSpeInventory] = useState(() => {
     try {
       const saved = localStorage.getItem('tactical_spe_inventory');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.dailyConsumption || Number(parsed.dailyConsumption) === 1400) {
-          parsed.dailyConsumption = 20000;
-        }
-        return parsed;
+        return normalizeSpeInventory(JSON.parse(saved));
       }
     } catch (e) {}
-    return INITIAL_SPE_INVENTORY;
+    return normalizeSpeInventory(INITIAL_SPE_INVENTORY);
   });
   const [customSpeCoords, setCustomSpeCoords] = useState(null);
 
@@ -220,13 +217,8 @@ export default function App() {
         const data = await fetchAllInventoryData();
         if (isMounted) {
           if (data.incheon) setIncheonInventory(data.incheon);
-          if (data.kokomo) setKokomoInventory(data.kokomo);
-          if (data.spe) {
-            setSpeInventory({
-              ...data.spe,
-              dailyConsumption: (!data.spe.dailyConsumption || Number(data.spe.dailyConsumption) === 1400) ? 20000 : Number(data.spe.dailyConsumption)
-            });
-          }
+          if (data.kokomo) setKokomoInventory(normalizeKokomoInventory(data.kokomo));
+          if (data.spe) setSpeInventory(normalizeSpeInventory(data.spe));
           if (data.shipments) setShipments(data.shipments);
         }
       } catch (err) {
@@ -241,11 +233,11 @@ export default function App() {
         sound.playRadar();
       },
       onKokomoChange: (newKokomo) => {
-        setKokomoInventory(newKokomo);
+        setKokomoInventory(normalizeKokomoInventory(newKokomo));
         sound.playRadar();
       },
       onSpeChange: (newSpe) => {
-        setSpeInventory(newSpe);
+        setSpeInventory(normalizeSpeInventory(newSpe));
         sound.playRadar();
       },
       onShipmentsChange: (newShipments) => {
@@ -375,19 +367,32 @@ export default function App() {
       event: `${s.batchNo || '차수'} 코코모 입고 완료 (+${(Number(s.quantity) || 0).toLocaleString()} EA)`
     })).reverse().slice(0, 5);
 
-    let baseMulti = Number(kokomoInventory.multiAssy) || 0;
-    let baseCap = Number(kokomoInventory.capAssy) || 0;
-    let baseBack = Number(kokomoInventory.backShip) || 0;
+    const normKokomo = normalizeKokomoInventory(kokomoInventory);
+    let baseMulti = 0;
+    let baseCap = 0;
+    let baseBack = 0;
 
-    if (selectedProduct !== 'ALL' && kokomoInventory.byProduct?.[selectedProduct]) {
-      const prodStock = kokomoInventory.byProduct[selectedProduct];
-      baseMulti = Number(prodStock.multiAssy) || 0;
-      baseCap = Number(prodStock.capAssy) || 0;
-      baseBack = Number(prodStock.backShip) || 0;
+    if (selectedProduct === 'ESS8-1') {
+      const p = normKokomo.byProduct['ESS8-1'];
+      baseMulti = Number(p.multiAssy) || 0;
+      baseCap = Number(p.capAssy) || 0;
+      baseBack = Number(p.backShip) || 0;
+    } else if (selectedProduct === 'ESS11-1') {
+      const p = normKokomo.byProduct['ESS11-1'];
+      baseMulti = Number(p.multiAssy) || 0;
+      baseCap = Number(p.capAssy) || 0;
+      baseBack = Number(p.backShip) || 0;
+    } else {
+      // 'ALL'
+      const p8 = normKokomo.byProduct['ESS8-1'];
+      const p11 = normKokomo.byProduct['ESS11-1'];
+      baseMulti = (Number(p8.multiAssy) || 0) + (Number(p11.multiAssy) || 0);
+      baseCap = (Number(p8.capAssy) || 0) + (Number(p11.capAssy) || 0);
+      baseBack = (Number(p8.backShip) || 0) + (Number(p11.backShip) || 0);
     }
 
     return {
-      ...kokomoInventory,
+      ...normKokomo,
       multiAssy: baseMulti + addMulti,
       capAssy: baseCap + addCap,
       backShip: baseBack + addBack,
@@ -396,22 +401,38 @@ export default function App() {
       arrivedCount: targetArrived.length,
       history: [
         ...recentArrivalEvents,
-        ...(kokomoInventory.history || [])
+        ...(normKokomo.history || [])
       ].slice(0, 10)
     };
   }, [kokomoInventory, arrivedShipments, selectedProduct]);
 
-  // Dynamic SPE Inventory
+  // Dynamic SPE Inventory: Segregated per model
   const effectiveSpeInventory = useMemo(() => {
-    if (selectedProduct !== 'ALL' && speInventory.byProduct?.[selectedProduct]) {
-      const prodSpe = speInventory.byProduct[selectedProduct];
+    const normSpe = normalizeSpeInventory(speInventory);
+    if (selectedProduct === 'ESS8-1') {
+      const p = normSpe.byProduct['ESS8-1'];
       return {
-        ...speInventory,
-        totalInventory: Number(prodSpe.totalInventory) || 0,
-        dailyConsumption: Number(prodSpe.dailyConsumption) || 12000
+        ...normSpe,
+        totalInventory: Number(p.totalInventory) || 0,
+        dailyConsumption: Number(p.dailyConsumption) || 20000
+      };
+    } else if (selectedProduct === 'ESS11-1') {
+      const p = normSpe.byProduct['ESS11-1'];
+      return {
+        ...normSpe,
+        totalInventory: Number(p.totalInventory) || 0,
+        dailyConsumption: Number(p.dailyConsumption) || 0
+      };
+    } else {
+      // 'ALL'
+      const p8 = normSpe.byProduct['ESS8-1'];
+      const p11 = normSpe.byProduct['ESS11-1'];
+      return {
+        ...normSpe,
+        totalInventory: (Number(p8.totalInventory) || 0) + (Number(p11.totalInventory) || 0),
+        dailyConsumption: (Number(p8.dailyConsumption) || 0) + (Number(p11.dailyConsumption) || 0)
       };
     }
-    return speInventory;
   }, [speInventory, selectedProduct]);
 
   const delayedShipments = filteredShipments.filter(s => s.isDelayed);
@@ -544,6 +565,8 @@ export default function App() {
         setAuthRole={setAuthRole}
         onOpenAdminAuth={() => setIsAdminAuthOpen(true)}
         isCloudSynced={isCloudSynced}
+        selectedProduct={selectedProduct}
+        themeMode={themeMode}
       />
 
       {/* System Settings Modal */}

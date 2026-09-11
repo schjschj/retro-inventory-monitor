@@ -39,20 +39,7 @@ import {
   syncSpeInventory, 
   syncShipments 
 } from '../services/inventoryService';
-
-// Smart Thousand Unit (천 EA / k EA) helpers:
-// Values entered in thousand units (e.g. 18 -> 18,000 EA)
-export const toEA = (val) => {
-  const num = Number(val) || 0;
-  if (num >= 1000) return Math.round(num);
-  return Math.round(num * 1000);
-};
-
-export const toK = (val) => {
-  const num = Number(val) || 0;
-  if (num >= 1000) return Math.round((num / 1000) * 10) / 10;
-  return num;
-};
+import { normalizeKokomoInventory, normalizeSpeInventory } from '../utils/inventoryNormalization';
 
 export default function DataControlModal({
   isOpen,
@@ -71,10 +58,36 @@ export default function DataControlModal({
   isAdmin = false,
   authRole = null,
   setAuthRole,
-  onOpenAdminAuth
+  onOpenAdminAuth,
+  selectedProduct = 'ESS8-1',
+  themeMode = 'dark'
 }) {
   const [activeTab, setActiveTab] = useState('INCHEON');
   const [uploadMessage, setUploadMessage] = useState(null);
+
+  // Model selection tab for US Stock (ESS8-1 vs ESS11-1)
+  const [selectedStockModel, setSelectedStockModel] = useState(() => 
+    selectedProduct === 'ESS11-1' ? 'ESS11-1' : 'ESS8-1'
+  );
+
+  // Normalized Kokomo and SPE states partitioned by model
+  const [kokomoByProduct, setKokomoByProduct] = useState(() => {
+    return normalizeKokomoInventory(kokomoInventory).byProduct;
+  });
+
+  const [speByProduct, setSpeByProduct] = useState(() => {
+    return normalizeSpeInventory(speInventory).byProduct;
+  });
+
+  useEffect(() => {
+    const norm = normalizeKokomoInventory(kokomoInventory);
+    setKokomoByProduct(norm.byProduct);
+  }, [kokomoInventory]);
+
+  useEffect(() => {
+    const norm = normalizeSpeInventory(speInventory);
+    setSpeByProduct(norm.byProduct);
+  }, [speInventory]);
 
   // Helper to always keep shipments strictly sorted by ETA ascending (earliest ETA first)
   const sortShipmentsByEtaAsc = (list) => {
@@ -93,33 +106,6 @@ export default function DataControlModal({
   const canEditSpe = currentRole === 'USA_LEAD' || currentRole === 'MASTER_ADMIN';
   const canUploadExcel = currentRole === 'MASTER_ADMIN' || currentRole === 'INCHEON_LEAD';
 
-  // Local editable form states for Kokomo and SPE in thousand units (천 EA)
-  const [kokomoForm, setKokomoForm] = useState({
-    multiAssy: toK(kokomoInventory.multiAssy),
-    capAssy: toK(kokomoInventory.capAssy),
-    backShip: toK(kokomoInventory.backShip)
-  });
-
-  const [speForm, setSpeForm] = useState({
-    totalInventory: toK(speInventory.totalInventory),
-    dailyConsumption: toK(speInventory.dailyConsumption)
-  });
-
-  useEffect(() => {
-    setKokomoForm({
-      multiAssy: toK(kokomoInventory.multiAssy),
-      capAssy: toK(kokomoInventory.capAssy),
-      backShip: toK(kokomoInventory.backShip)
-    });
-  }, [kokomoInventory.multiAssy, kokomoInventory.capAssy, kokomoInventory.backShip]);
-
-  useEffect(() => {
-    setSpeForm({
-      totalInventory: toK(speInventory.totalInventory),
-      dailyConsumption: toK(speInventory.dailyConsumption)
-    });
-  }, [speInventory.totalInventory, speInventory.dailyConsumption]);
-
   // States for importing/bundling passed inspection lots into a new shipment
   const [selectedLotIds, setSelectedLotIds] = useState([]);
   const [deductPassedLotsOnDispatch, setDeductPassedLotsOnDispatch] = useState(true);
@@ -130,7 +116,7 @@ export default function DataControlModal({
     type: 'SEA',
     vesselName: '',
     containerNo: '',
-    quantity: 5, // 5 천 EA (= 5,000 EA)
+    quantity: 5000,
     departureDate: new Date().toISOString().slice(0, 16),
     eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
     progress: 0,
@@ -165,7 +151,7 @@ export default function DataControlModal({
     id: `LOT-KR-${Date.now().toString().slice(-4)}`,
     product: 'ESS8-1',
     name: 'ESS8-1',
-    quantity: 2, // 2 천 EA (= 2,000 EA)
+    quantity: 2000,
     date: new Date().toISOString().slice(0, 10),
     status: '검사대기',
     note: '공정 완료 수입검사 대기'
@@ -207,21 +193,50 @@ export default function DataControlModal({
     return true;
   };
 
+  const handleKokomoFieldChange = (field, val) => {
+    const num = Math.max(0, Number(val) || 0);
+    setKokomoByProduct(prev => ({
+      ...prev,
+      [selectedStockModel]: {
+        ...prev[selectedStockModel],
+        [field]: num
+      }
+    }));
+  };
+
+  const handleSpeFieldChange = (field, val) => {
+    const num = Math.max(0, Number(val) || 0);
+    setSpeByProduct(prev => ({
+      ...prev,
+      [selectedStockModel]: {
+        ...prev[selectedStockModel],
+        [field]: num
+      }
+    }));
+  };
+
   const handleSaveKokomo = (e) => {
     if (e) e.preventDefault();
     if (!checkPermission('KOKOMO')) return;
+    const ess8K = kokomoByProduct['ESS8-1'] || { multiAssy: 0, capAssy: 0, backShip: 0 };
+    const ess11K = kokomoByProduct['ESS11-1'] || { multiAssy: 0, capAssy: 0, backShip: 0 };
     const updated = {
       ...kokomoInventory,
-      multiAssy: toEA(kokomoForm.multiAssy),
-      capAssy: toEA(kokomoForm.capAssy),
-      backShip: toEA(kokomoForm.backShip)
+      byProduct: kokomoByProduct,
+      multiAssy: (Number(ess8K.multiAssy) || 0) + (Number(ess11K.multiAssy) || 0),
+      capAssy: (Number(ess8K.capAssy) || 0) + (Number(ess11K.capAssy) || 0),
+      backShip: (Number(ess8K.backShip) || 0) + (Number(ess11K.backShip) || 0)
     };
     setKokomoInventory(updated);
+    syncKokomoInventory(updated);
+    try {
+      localStorage.setItem('tactical_kokomo_inventory', JSON.stringify(updated));
+    } catch(e) {}
     sound.playSuccess();
     setUploadMessage({
       type: 'success',
       text: lang === 'ko' 
-        ? `[저장 성공] 미주법인 재고가 클라우드에 영구 저장되었습니다! (Multi: ${toEA(kokomoForm.multiAssy).toLocaleString()}, Cap: ${toEA(kokomoForm.capAssy).toLocaleString()}, Back: ${toEA(kokomoForm.backShip).toLocaleString()} EA)`
+        ? `[저장 성공] 미주법인 재고(ESS8-1 / ESS11-1 분리)가 클라우드에 영구 저장되었습니다!`
         : `[Success] Kokomo inventory saved to cloud successfully!`
     });
   };
@@ -229,17 +244,24 @@ export default function DataControlModal({
   const handleSaveSpe = (e) => {
     if (e) e.preventDefault();
     if (!checkPermission('SPE')) return;
+    const ess8S = speByProduct['ESS8-1'] || { totalInventory: 0, dailyConsumption: 0 };
+    const ess11S = speByProduct['ESS11-1'] || { totalInventory: 0, dailyConsumption: 0 };
     const updated = {
       ...speInventory,
-      totalInventory: toEA(speForm.totalInventory),
-      dailyConsumption: toEA(speForm.dailyConsumption) || 20000
+      byProduct: speByProduct,
+      totalInventory: (Number(ess8S.totalInventory) || 0) + (Number(ess11S.totalInventory) || 0),
+      dailyConsumption: (Number(ess8S.dailyConsumption) || 0) + (Number(ess11S.dailyConsumption) || 0)
     };
     setSpeInventory(updated);
+    syncSpeInventory(updated);
+    try {
+      localStorage.setItem('tactical_spe_inventory', JSON.stringify(updated));
+    } catch(e) {}
     sound.playSuccess();
     setUploadMessage({
       type: 'success',
       text: lang === 'ko'
-        ? `[저장 성공] 고객 SPE 재고가 클라우드에 영구 저장되었습니다! (총재고: ${toEA(speForm.totalInventory).toLocaleString()} EA, 일일소진: ${toEA(speForm.dailyConsumption).toLocaleString()} EA/일)`
+        ? `[저장 성공] 고객 SPE 재고(ESS8-1 / ESS11-1 분리)가 클라우드에 영구 저장되었습니다!`
         : `[Success] Customer SPE inventory saved to cloud successfully!`
     });
   };
@@ -276,17 +298,23 @@ export default function DataControlModal({
     }
     sound.playSuccess();
 
+    const ess8K = kokomoByProduct['ESS8-1'] || { multiAssy: 0, capAssy: 0, backShip: 0 };
+    const ess11K = kokomoByProduct['ESS11-1'] || { multiAssy: 0, capAssy: 0, backShip: 0 };
     const updatedKokomo = {
       ...kokomoInventory,
-      multiAssy: toEA(kokomoForm.multiAssy),
-      capAssy: toEA(kokomoForm.capAssy),
-      backShip: toEA(kokomoForm.backShip)
+      byProduct: kokomoByProduct,
+      multiAssy: (Number(ess8K.multiAssy) || 0) + (Number(ess11K.multiAssy) || 0),
+      capAssy: (Number(ess8K.capAssy) || 0) + (Number(ess11K.capAssy) || 0),
+      backShip: (Number(ess8K.backShip) || 0) + (Number(ess11K.backShip) || 0)
     };
 
+    const ess8S = speByProduct['ESS8-1'] || { totalInventory: 0, dailyConsumption: 0 };
+    const ess11S = speByProduct['ESS11-1'] || { totalInventory: 0, dailyConsumption: 0 };
     const updatedSpe = {
       ...speInventory,
-      totalInventory: toEA(speForm.totalInventory),
-      dailyConsumption: toEA(speForm.dailyConsumption) || 20000
+      byProduct: speByProduct,
+      totalInventory: (Number(ess8S.totalInventory) || 0) + (Number(ess11S.totalInventory) || 0),
+      dailyConsumption: (Number(ess8S.dailyConsumption) || 0) + (Number(ess11S.dailyConsumption) || 0)
     };
 
     // Update state and explicitly trigger persistent sync for all
@@ -312,8 +340,8 @@ export default function DataControlModal({
     setUploadMessage({
       type: 'success',
       text: lang === 'ko' 
-        ? '✅ 전체 거점의 재고 및 운송 차수 데이터가 클라우드 및 브라우저에 영구 저장되었습니다!' 
-        : '✅ All inventory & shipment data successfully saved to cloud and storage!'
+        ? '✅ 전체 거점 재고(ESS8-1 / ESS11-1 별도 분리) 및 운송 차수 데이터가 클라우드 및 브라우저에 영구 저장되었습니다!' 
+        : '✅ All inventory (ESS8-1 & ESS11-1 segregated) and shipment data successfully saved to cloud and storage!'
     });
   };
 
@@ -325,7 +353,7 @@ export default function DataControlModal({
       const totalQ = remainingLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
       setNewShipment(prev => ({
         ...prev,
-        quantity: totalQ > 0 ? toK(totalQ) : 5
+        quantity: totalQ > 0 ? totalQ : 5000
       }));
     } else {
       const nextIds = [...selectedLotIds, lot.id];
@@ -334,7 +362,7 @@ export default function DataControlModal({
       const totalQ = chosenLots.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
       setNewShipment(prev => ({
         ...prev,
-        quantity: toK(totalQ),
+        quantity: totalQ,
         batchNo: prev.batchNo || `해상 26-${Date.now().toString().slice(-2)}차`,
         vesselName: prev.vesselName || 'HMM PACIFIC GLORY'
       }));
@@ -350,7 +378,7 @@ export default function DataControlModal({
       return;
     }
 
-    const targetQtyEA = toEA(newShipment.quantity);
+    const targetQtyEA = Math.max(1, Number(newShipment.quantity) || 5000);
     const chosenLots = incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id));
     const items = chosenLots.length > 0
       ? chosenLots.map(l => ({ name: l.name, qty: Number(l.quantity) || 0 }))
@@ -400,7 +428,7 @@ export default function DataControlModal({
       type: 'SEA',
       vesselName: '',
       containerNo: '',
-      quantity: 5, // 5 천 EA (= 5,000 EA)
+      quantity: 5000,
       departureDate: new Date().toISOString().slice(0, 16),
       eta: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16),
       progress: 0,
@@ -414,7 +442,7 @@ export default function DataControlModal({
     setUploadMessage({
       type: 'success',
       text: lang === 'ko'
-        ? `신규 운송 차수(${created.batchNo})가 등록되었습니다! (${toK(targetQtyEA)} 천 EA / ${targetQtyEA.toLocaleString()} EA) ${chosenLots.length > 0 ? `(선택된 ${chosenLots.length}개 인천 출하합격 로트 선적 완료)` : ''}`
+        ? `신규 운송 차수(${created.batchNo})가 등록되었습니다! (${targetQtyEA.toLocaleString()} EA) ${chosenLots.length > 0 ? `(선택된 ${chosenLots.length}개 인천 출하합격 로트 선적 완료)` : ''}`
         : `New shipment batch (${created.batchNo}) registered successfully!`
     });
   };
@@ -460,7 +488,7 @@ export default function DataControlModal({
       type: s.type || 'SEA',
       vesselName: s.vesselName || '',
       containerNo: s.containerNo || '',
-      quantity: toK(s.quantity),
+      quantity: s.quantity || 0,
       departureDate: s.departureDate ? s.departureDate.slice(0, 16) : '',
       eta: s.eta ? s.eta.slice(0, 16) : '',
       progress: s.progress || 0,
@@ -474,7 +502,7 @@ export default function DataControlModal({
   const handleSaveEditShipment = async (id) => {
     if (!checkPermission('SHIPMENTS')) return;
     sound.playSuccess();
-    const editQtyEA = toEA(editShipmentForm.quantity);
+    const editQtyEA = Math.max(1, Number(editShipmentForm.quantity) || 1);
     const mapped = shipments.map(s => {
       if (s.id === id) {
         return {
@@ -484,7 +512,7 @@ export default function DataControlModal({
           type: editShipmentForm.type,
           vesselName: editShipmentForm.vesselName,
           containerNo: editShipmentForm.containerNo,
-          quantity: Math.max(1, editQtyEA || 1),
+          quantity: editQtyEA,
           departureDate: editShipmentForm.departureDate || s.departureDate,
           eta: editShipmentForm.eta || s.eta,
           progress: Math.min(100, Math.max(0, Number(editShipmentForm.progress) || 0)),
@@ -507,7 +535,7 @@ export default function DataControlModal({
     setEditingShipmentId(null);
     setUploadMessage({
       type: 'success',
-      text: lang === 'ko' ? `[수정 완료] ${editShipmentForm.batchNo} 운송 차수 정보가 성공적으로 수정되었습니다. (${toK(editQtyEA)} 천 EA / ${editQtyEA.toLocaleString()} EA)` : `Shipment ${editShipmentForm.batchNo} updated successfully.`
+      text: lang === 'ko' ? `[수정 완료] ${editShipmentForm.batchNo} 운송 차수 정보가 성공적으로 수정되었습니다. (${editQtyEA.toLocaleString()} EA)` : `Shipment ${editShipmentForm.batchNo} updated successfully.`
     });
   };
 
@@ -608,7 +636,7 @@ export default function DataControlModal({
     if (!checkPermission('INCHEON')) return;
     sound.playSuccess();
     const prod = newLot.product || 'ESS8-1';
-    const lotQtyEA = toEA(newLot.quantity);
+    const lotQtyEA = Math.max(1, Number(newLot.quantity) || 2000);
     setIncheonInventory({
       ...incheonInventory,
       waitingInspection: [
@@ -625,14 +653,14 @@ export default function DataControlModal({
       id: `LOT-KR-${Date.now().toString().slice(-4)}`,
       product: prod,
       name: prod,
-      quantity: 2, // 2 천 EA (= 2,000 EA)
+      quantity: 2000,
       date: new Date().toISOString().slice(0, 10),
       status: '검사대기',
       note: '공정 완료'
     });
     setUploadMessage({
       type: 'success',
-      text: lang === 'ko' ? `[등록 완료] 검사대기 로트 ${newLot.id} (${toK(lotQtyEA)} 천 EA / ${lotQtyEA.toLocaleString()} EA)가 등록되었습니다.` : `Lot ${newLot.id} registered successfully.`
+      text: lang === 'ko' ? `[등록 완료] 검사대기 로트 ${newLot.id} (${lotQtyEA.toLocaleString()} EA)가 등록되었습니다.` : `Lot ${newLot.id} registered successfully.`
     });
   };
 
@@ -764,8 +792,8 @@ export default function DataControlModal({
             <span className="w-2.5 h-2.5 bg-cyan-400 animate-pulse"></span>
             <h2 className="text-sm md:text-base font-bold text-cyan-300">
               {lang === 'en' 
-                ? '[DATA CONTROL CENTER] Inventory & Dispatches · Unit: k EA' 
-                : '[데이터 통제 센터] 재고 관리 & 물류 통제 · 단위: 천 EA (k EA)'}
+                ? '[DATA CONTROL CENTER] Inventory & Logistics Management (Unit: EA)' 
+                : '[데이터 통제 센터] 재고 관리 & 물류 통제 (단위: EA)'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -1013,7 +1041,7 @@ export default function DataControlModal({
                               <span>{isSelected ? '✓' : '+'}</span>
                               <span className="font-mono">{lot.id}</span>
                               <span className="text-slate-300 font-normal">({lot.name})</span>
-                              <span className="text-amber-300 font-mono">{toK(lot.quantity)} 천 EA</span>
+                              <span className="text-amber-300 font-mono">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                             </button>
                           );
                         })}
@@ -1021,7 +1049,7 @@ export default function DataControlModal({
 
                       {selectedLotIds.length > 0 && (
                         <div className="pt-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[10.5px] text-emerald-300 border-t border-cyan-900/80">
-                          <span>✅ {selectedLotIds.length}개 로트 선택됨 (총 {toK(incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0))} 천 EA / {incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0).toLocaleString()} EA 적재)</span>
+                          <span>✅ {selectedLotIds.length}개 로트 선택됨 (총 {incheonInventory.passedInspection.filter(l => selectedLotIds.includes(l.id)).reduce((sum, l) => sum + (Number(l.quantity) || 0), 0).toLocaleString()} EA 적재)</span>
                           <label className="flex items-center gap-1.5 text-slate-200 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1093,18 +1121,18 @@ export default function DataControlModal({
 
                   <div>
                     <div className="flex items-center justify-between text-[10px] mb-1">
-                      <label className="text-slate-400">적재 수량 (천 EA)</label>
-                      <span className="text-cyan-400 font-mono">(= {toEA(newShipment.quantity).toLocaleString()} EA)</span>
+                      <label className="text-slate-400">적재 수량 (EA)</label>
+                      <span className="text-cyan-400 font-mono">(= {(Number(newShipment.quantity) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      placeholder="예: 5 (= 5,000 EA)"
+                      step="1"
+                      placeholder="예: 5000"
                       value={newShipment.quantity}
                       onChange={e => setNewShipment({ ...newShipment, quantity: e.target.value })}
                       disabled={!canEditShipments}
                       className={`w-full p-1.5 outline-none ${!canEditShipments ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#09111c] border border-slate-700 text-white focus:border-cyan-400'}`}
-                      min="0.001"
+                      min="1"
                       required
                     />
                   </div>
@@ -1256,16 +1284,16 @@ export default function DataControlModal({
 
                           <div>
                             <div className="flex items-center justify-between text-[10px] mb-1">
-                              <label className="text-slate-400">적재 수량 (천 EA)</label>
-                              <span className="text-amber-400 font-mono">(= {toEA(editShipmentForm.quantity).toLocaleString()} EA)</span>
+                              <label className="text-slate-400">적재 수량 (EA)</label>
+                              <span className="text-amber-400 font-mono">(= {(Number(editShipmentForm.quantity) || 0).toLocaleString()} EA)</span>
                             </div>
                             <input
                               type="number"
-                              step="0.1"
+                              step="1"
                               value={editShipmentForm.quantity}
                               onChange={e => setEditShipmentForm({ ...editShipmentForm, quantity: e.target.value })}
                               className="w-full p-1.5 bg-[#09111c] border border-cyan-600 text-white rounded text-xs focus:border-amber-400 outline-none"
-                              min="0.001"
+                              min="1"
                             />
                           </div>
 
@@ -1390,7 +1418,7 @@ export default function DataControlModal({
                               )}
                             </div>
                             <div className="text-[11px] text-slate-400 mt-0.5">
-                              적재량: <span className="text-amber-300 font-bold">{toK(s.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(s.quantity) || 0).toLocaleString()} EA)</span> | ETA: {s.eta ? s.eta.slice(0, 16).replace('T', ' ') : '-'}
+                              적재량: <span className="text-amber-300 font-bold">{(Number(s.quantity) || 0).toLocaleString()} EA</span> | ETA: {s.eta ? s.eta.slice(0, 16).replace('T', ' ') : '-'}
                             </div>
                           </div>
                         </div>
@@ -1525,18 +1553,18 @@ export default function DataControlModal({
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[10px] mb-1">
-                      <label className="text-slate-400">수량 (천 EA)</label>
-                      <span className="text-cyan-400 font-mono">(= {toEA(newLot.quantity).toLocaleString()} EA)</span>
+                      <label className="text-slate-400">수량 (EA)</label>
+                      <span className="text-cyan-400 font-mono">(= {(Number(newLot.quantity) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      placeholder="예: 2 (= 2,000 EA)"
+                      step="1"
+                      placeholder="예: 2000"
                       value={newLot.quantity}
                       onChange={e => setNewLot({ ...newLot, quantity: e.target.value })}
                       disabled={!canEditIncheon}
                       className={`w-full p-1.5 text-xs outline-none ${!canEditIncheon ? 'bg-[#060a12] border border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-[#08111c] border border-slate-700 text-white focus:border-cyan-400'}`}
-                      min="0.001"
+                      min="1"
                       required
                     />
                   </div>
@@ -1562,8 +1590,8 @@ export default function DataControlModal({
                     <span className="font-bold text-amber-300 flex items-center gap-1">
                       <Clock className="w-4 h-4" /> 검사대기 목록
                     </span>
-                    <span className="text-[10px] text-amber-400">
-                      총 {toK(incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))} 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
+                    <span className="text-[10px] text-amber-400 font-bold">
+                      총 {incheonInventory.waitingInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1572,7 +1600,7 @@ export default function DataControlModal({
                         <div className="min-w-0 flex-1 pr-1">
                           <div className="text-white font-bold text-xs truncate">{lot.id}</div>
                           <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-amber-300 font-semibold">{toK(lot.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(lot.quantity) || 0).toLocaleString()} EA)</span>
+                            {lot.name} | <span className="text-amber-300 font-semibold">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                           </div>
                         </div>
                         <button
@@ -1596,8 +1624,8 @@ export default function DataControlModal({
                     <span className="font-bold text-emerald-300 flex items-center gap-1">
                       <CheckCircle className="w-4 h-4" /> 출하합격 (선적 준비완료)
                     </span>
-                    <span className="text-[10px] text-emerald-400">
-                      총 {toK(incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0))} 천 EA <span className="text-slate-500 text-[9.5px]">({incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA)</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">
+                      총 {incheonInventory.passedInspection.reduce((a, b) => a + (Number(b.quantity) || 0), 0).toLocaleString()} EA
                     </span>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1606,7 +1634,7 @@ export default function DataControlModal({
                         <div className="min-w-0 flex-1 pr-1">
                           <div className="text-white font-bold text-xs truncate">{lot.id}</div>
                           <div className="text-slate-400 text-[10px] sm:text-[11px] truncate">
-                            {lot.name} | <span className="text-emerald-300 font-semibold">{toK(lot.quantity)} 천 EA</span> <span className="text-slate-500 text-[10px]">({(Number(lot.quantity) || 0).toLocaleString()} EA)</span>
+                            {lot.name} | <span className="text-emerald-300 font-semibold">{(Number(lot.quantity) || 0).toLocaleString()} EA</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1659,12 +1687,60 @@ export default function DataControlModal({
                 </div>
               )}
 
+              {/* Model Switcher Sub-nav for Independent Inventory Management */}
+              <div className="p-3 bg-[#0a1324] border border-cyan-500/60 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-2">
+                  <span className="text-cyan-300 font-bold text-xs">품목별 재고 편집 대상:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStockModel('ESS8-1')}
+                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 ${
+                        selectedStockModel === 'ESS8-1'
+                          ? 'bg-cyan-600 text-white border border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                      }`}
+                    >
+                      <span>📦 ESS8-1 (기존 DB 데이터)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStockModel('ESS11-1')}
+                      className={`px-3 py-1.5 rounded font-bold text-xs transition-all flex items-center gap-1.5 ${
+                        selectedStockModel === 'ESS11-1'
+                          ? 'bg-amber-600 text-white border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                      }`}
+                    >
+                      <span>⚡ ESS11-1 (신규 별도 관리)</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  현재 편집 중: <span className="font-bold text-cyan-300">{selectedStockModel}</span> 독립 재고
+                </div>
+              </div>
+
               {/* Kokomo Facility Stock Form */}
               <div className={`border p-4 space-y-3 rounded transition-opacity ${!canEditKokomo ? 'bg-[#120d07] border-slate-800 opacity-60' : 'bg-[#18120b] border-amber-600'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-800/60 pb-2">
                   <div className="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
                     <Building2 className="w-4 h-4 text-amber-400" />
-                    <span>미주법인 (코코모) 3대 재고 직접 조정</span>
+                    <span>미주법인 (코코모) 3대 재고 - [{selectedStockModel}]</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-amber-300/80">
+                      선택 품목 합계: <b className="text-white">{((kokomoByProduct[selectedStockModel]?.multiAssy || 0) + (kokomoByProduct[selectedStockModel]?.capAssy || 0) + (kokomoByProduct[selectedStockModel]?.backShip || 0)).toLocaleString()} EA</b>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!canEditKokomo}
+                      onClick={handleSaveKokomo}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded border border-amber-300 transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{selectedStockModel} 법인재고 저장</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1677,14 +1753,14 @@ export default function DataControlModal({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-cyan-300 font-bold">Multi Assy 수량 (천 EA)</label>
-                      <span className="text-cyan-400 font-mono text-[10px]">(= {toEA(kokomoForm.multiAssy).toLocaleString()} EA)</span>
+                      <label className="text-cyan-300 font-bold">Multi Assy 수량 (EA)</label>
+                      <span className="text-cyan-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.multiAssy) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      value={kokomoForm.multiAssy}
-                      onChange={e => setKokomoForm({ ...kokomoForm, multiAssy: e.target.value })}
+                      step="1"
+                      value={kokomoByProduct[selectedStockModel]?.multiAssy ?? 0}
+                      onChange={e => handleKokomoFieldChange('multiAssy', e.target.value)}
                       disabled={!canEditKokomo}
                       className={`w-full p-2 font-bold outline-none border ${
                         !canEditKokomo
@@ -1695,14 +1771,14 @@ export default function DataControlModal({
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-emerald-300 font-bold">Cap Assy 수량 (천 EA)</label>
-                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(kokomoForm.capAssy).toLocaleString()} EA)</span>
+                      <label className="text-emerald-300 font-bold">Cap Assy 수량 (EA)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.capAssy) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      value={kokomoForm.capAssy}
-                      onChange={e => setKokomoForm({ ...kokomoForm, capAssy: e.target.value })}
+                      step="1"
+                      value={kokomoByProduct[selectedStockModel]?.capAssy ?? 0}
+                      onChange={e => handleKokomoFieldChange('capAssy', e.target.value)}
                       disabled={!canEditKokomo}
                       className={`w-full p-2 font-bold outline-none border ${
                         !canEditKokomo
@@ -1713,14 +1789,14 @@ export default function DataControlModal({
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-rose-300 font-bold">Back ship 수량 (천 EA)</label>
-                      <span className="text-rose-400 font-mono text-[10px]">(= {toEA(kokomoForm.backShip).toLocaleString()} EA)</span>
+                      <label className="text-rose-300 font-bold">Back ship 수량 (EA)</label>
+                      <span className="text-rose-400 font-mono text-[10px]">(= {(Number(kokomoByProduct[selectedStockModel]?.backShip) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      value={kokomoForm.backShip}
-                      onChange={e => setKokomoForm({ ...kokomoForm, backShip: e.target.value })}
+                      step="1"
+                      value={kokomoByProduct[selectedStockModel]?.backShip ?? 0}
+                      onChange={e => handleKokomoFieldChange('backShip', e.target.value)}
                       disabled={!canEditKokomo}
                       className={`w-full p-2 font-bold outline-none border ${
                         !canEditKokomo
@@ -1730,11 +1806,6 @@ export default function DataControlModal({
                     />
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between text-[11px] text-amber-300/80 pt-1">
-                  <span>* 미주법인 전체 재고는 세 품목의 합계로 지도 및 상단 HUD에 자동 반영됩니다.</span>
-                  <span className="font-bold text-amber-300">합계: {toK(toEA(kokomoForm.multiAssy) + toEA(kokomoForm.capAssy) + toEA(kokomoForm.backShip))} 천 EA <span className="text-slate-400 font-normal">({(toEA(kokomoForm.multiAssy) + toEA(kokomoForm.capAssy) + toEA(kokomoForm.backShip)).toLocaleString()} EA)</span></span>
-                </div>
               </div>
 
               {/* Customer SPE Inventory Form */}
@@ -1742,21 +1813,30 @@ export default function DataControlModal({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-800/60 pb-2">
                   <div className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
                     <Factory className="w-4 h-4 text-emerald-400" />
-                    <span>고객 SPE 현장 잔여 재고 및 일일 소진율</span>
+                    <span>고객 SPE 현장 잔여 재고 및 일일 소진율 - [{selectedStockModel}]</span>
                   </div>
+                  <button
+                    type="button"
+                    disabled={!canEditSpe}
+                    onClick={handleSaveSpe}
+                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded border border-emerald-300 transition-all flex items-center gap-1 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{selectedStockModel} 고객재고 저장</span>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-slate-300 font-bold">고객 보유 총재고 (천 EA)</label>
-                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(speForm.totalInventory).toLocaleString()} EA)</span>
+                      <label className="text-slate-300 font-bold">고객 보유 총재고 (EA)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {(Number(speByProduct[selectedStockModel]?.totalInventory) || 0).toLocaleString()} EA)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      value={speForm.totalInventory}
-                      onChange={e => setSpeForm({ ...speForm, totalInventory: e.target.value })}
+                      step="1"
+                      value={speByProduct[selectedStockModel]?.totalInventory ?? 0}
+                      onChange={e => handleSpeFieldChange('totalInventory', e.target.value)}
                       disabled={!canEditSpe}
                       className={`w-full p-2 font-bold outline-none border ${
                         !canEditSpe
@@ -1767,14 +1847,14 @@ export default function DataControlModal({
                   </div>
                   <div>
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <label className="text-slate-300 font-bold">일일 소진율 (천 EA/일)</label>
-                      <span className="text-emerald-400 font-mono text-[10px]">(= {toEA(speForm.dailyConsumption).toLocaleString()} EA/일)</span>
+                      <label className="text-slate-300 font-bold">일일 소진율 (EA/일)</label>
+                      <span className="text-emerald-400 font-mono text-[10px]">(= {(Number(speByProduct[selectedStockModel]?.dailyConsumption) || 0).toLocaleString()} EA/일)</span>
                     </div>
                     <input
                       type="number"
-                      step="0.1"
-                      value={speForm.dailyConsumption}
-                      onChange={e => setSpeForm({ ...speForm, dailyConsumption: e.target.value })}
+                      step="1"
+                      value={speByProduct[selectedStockModel]?.dailyConsumption ?? 0}
+                      onChange={e => handleSpeFieldChange('dailyConsumption', e.target.value)}
                       disabled={!canEditSpe}
                       className={`w-full p-2 font-bold outline-none border ${
                         !canEditSpe
@@ -1786,9 +1866,103 @@ export default function DataControlModal({
                 </div>
 
                 <div className="text-[11px] text-emerald-400/80 pt-1">
-                  * 고객 생산라인 잔여 가동 가능일: <span className="font-bold text-amber-300">
-                    {toEA(speForm.dailyConsumption) > 0 ? (toEA(speForm.totalInventory) / toEA(speForm.dailyConsumption)).toFixed(1) : 0}일분
+                  * [{selectedStockModel}] 고객 생산라인 잔여 가동 가능일: <span className="font-bold text-amber-300">
+                    {(Number(speByProduct[selectedStockModel]?.dailyConsumption) || 0) > 0 
+                      ? ((Number(speByProduct[selectedStockModel]?.totalInventory) || 0) / (Number(speByProduct[selectedStockModel]?.dailyConsumption) || 1)).toFixed(1) 
+                      : 0}일분
                   </span>
+                </div>
+              </div>
+
+              {/* Executive Product Comparison & Cross-check Table */}
+              <div className="border border-slate-700 bg-[#09101c] p-3 rounded space-y-2">
+                <div className="font-bold text-slate-200 flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-cyan-400" />
+                    <span>품목별 미주 재고 비교표 (ESS8-1 기존 DB vs ESS11-1 신규)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    * 최상단 품목 드롭다운 선택 시 해당 품목의 재고가 화면에 자동 연동됩니다.
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-700 text-slate-400 bg-[#0e1726]">
+                        <th className="p-2">품목 구분</th>
+                        <th className="p-2 text-right">코코모 Multi Assy</th>
+                        <th className="p-2 text-right">코코모 Cap Assy</th>
+                        <th className="p-2 text-right">코코모 Back Ship</th>
+                        <th className="p-2 text-right text-amber-300">코코모 총재고</th>
+                        <th className="p-2 text-right text-emerald-300">SPE 고객 총재고</th>
+                        <th className="p-2 text-right">SPE 일일소진</th>
+                        <th className="p-2 text-right text-cyan-300">가동일수</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      <tr className="hover:bg-cyan-950/20">
+                        <td className="p-2 font-bold text-cyan-300">📦 ESS8-1 (기존 DB)</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS8-1']?.multiAssy) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS8-1']?.capAssy) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS8-1']?.backShip) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono font-bold text-amber-300">
+                          {((Number(kokomoByProduct['ESS8-1']?.multiAssy) || 0) + (Number(kokomoByProduct['ESS8-1']?.capAssy) || 0) + (Number(kokomoByProduct['ESS8-1']?.backShip) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono font-bold text-emerald-300">
+                          {(Number(speByProduct['ESS8-1']?.totalInventory) || 0).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono">{(Number(speByProduct['ESS8-1']?.dailyConsumption) || 0).toLocaleString()} EA/일</td>
+                        <td className="p-2 text-right font-mono text-cyan-300 font-bold">
+                          {(Number(speByProduct['ESS8-1']?.dailyConsumption) || 0) > 0 
+                            ? ((Number(speByProduct['ESS8-1']?.totalInventory) || 0) / (Number(speByProduct['ESS8-1']?.dailyConsumption) || 1)).toFixed(1) 
+                            : 0}일
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-amber-950/20">
+                        <td className="p-2 font-bold text-amber-300">⚡ ESS11-1 (신규 별도)</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS11-1']?.multiAssy) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS11-1']?.capAssy) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono">{(Number(kokomoByProduct['ESS11-1']?.backShip) || 0).toLocaleString()} EA</td>
+                        <td className="p-2 text-right font-mono font-bold text-amber-300">
+                          {((Number(kokomoByProduct['ESS11-1']?.multiAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.capAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.backShip) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono font-bold text-emerald-300">
+                          {(Number(speByProduct['ESS11-1']?.totalInventory) || 0).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono">{(Number(speByProduct['ESS11-1']?.dailyConsumption) || 0).toLocaleString()} EA/일</td>
+                        <td className="p-2 text-right font-mono text-cyan-300 font-bold">
+                          {(Number(speByProduct['ESS11-1']?.dailyConsumption) || 0) > 0 
+                            ? ((Number(speByProduct['ESS11-1']?.totalInventory) || 0) / (Number(speByProduct['ESS11-1']?.dailyConsumption) || 1)).toFixed(1) 
+                            : 0}일
+                        </td>
+                      </tr>
+                      <tr className="bg-slate-800/60 font-bold">
+                        <td className="p-2 text-white">합계 (ALL)</td>
+                        <td className="p-2 text-right font-mono text-cyan-200">
+                          {((Number(kokomoByProduct['ESS8-1']?.multiAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.multiAssy) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono text-emerald-200">
+                          {((Number(kokomoByProduct['ESS8-1']?.capAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.capAssy) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono text-rose-200">
+                          {((Number(kokomoByProduct['ESS8-1']?.backShip) || 0) + (Number(kokomoByProduct['ESS11-1']?.backShip) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono text-amber-400">
+                          {((Number(kokomoByProduct['ESS8-1']?.multiAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.multiAssy) || 0) +
+                            (Number(kokomoByProduct['ESS8-1']?.capAssy) || 0) + (Number(kokomoByProduct['ESS11-1']?.capAssy) || 0) +
+                            (Number(kokomoByProduct['ESS8-1']?.backShip) || 0) + (Number(kokomoByProduct['ESS11-1']?.backShip) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono text-emerald-400">
+                          {((Number(speByProduct['ESS8-1']?.totalInventory) || 0) + (Number(speByProduct['ESS11-1']?.totalInventory) || 0)).toLocaleString()} EA
+                        </td>
+                        <td className="p-2 text-right font-mono text-slate-300">
+                          {((Number(speByProduct['ESS8-1']?.dailyConsumption) || 0) + (Number(speByProduct['ESS11-1']?.dailyConsumption) || 0)).toLocaleString()} EA/일
+                        </td>
+                        <td className="p-2 text-right font-mono text-white">-</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
