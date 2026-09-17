@@ -498,6 +498,7 @@ export default function App() {
         themeMode={themeMode}
       />
       <div className={`px-3 py-1.5 text-[11px] font-bold border-b flex flex-wrap items-center gap-3 ${isCloudSynced ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200' : 'bg-amber-950/80 border-amber-700 text-amber-200'}`} role="status">
+        <span>v1.4.0 · 2026-09-04</span>
         <span>{isCloudSynced ? '● 실데이터 연결' : '● 시뮬레이션 데이터'}</span>
         <span>기준시각 {lastUpdatedAt.toLocaleString('ko-KR')}</span>
         <span>수량 단위 EA · 운송 중 재고 별도 표시</span>
