@@ -25,6 +25,7 @@ import {
 } from './services/inventoryService';
 import { isSupabaseConfigured } from './utils/supabaseClient';
 import { normalizeKokomoInventory, normalizeSpeInventory } from './utils/inventoryNormalization';
+import { validateShipments, appendAuditEntry } from './utils/dataValidation';
 
 export default function App() {
   // Global Data State (Cached in LocalStorage for instant persistence)
@@ -65,6 +66,8 @@ export default function App() {
   const [authRole, setAuthRole] = useState(null); // null | 'INCHEON_LEAD' | 'USA_LEAD' | 'MASTER_ADMIN'
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const isCloudSynced = isSupabaseConfigured();
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(new Date());
+  const [auditTrail, setAuditTrail] = useState([]);
 
   // Simulation Controls
   const [simTime, setSimTime] = useState(new Date('2026-09-09T09:00:00'));
@@ -257,6 +260,8 @@ export default function App() {
     setIncheonInventory(prev => {
       const updated = typeof updater === 'function' ? updater(prev) : updater;
       syncIncheonInventory(updated);
+      setLastUpdatedAt(new Date());
+      setAuditTrail(entries => appendAuditEntry(entries, 'INCHEON_UPDATE', { source: isCloudSynced ? 'cloud' : 'simulation' }));
       return updated;
     });
   };
@@ -265,6 +270,8 @@ export default function App() {
     setKokomoInventory(prev => {
       const updated = typeof updater === 'function' ? updater(prev) : updater;
       syncKokomoInventory(updated);
+      setLastUpdatedAt(new Date());
+      setAuditTrail(entries => appendAuditEntry(entries, 'KOKOMO_UPDATE', { source: isCloudSynced ? 'cloud' : 'simulation' }));
       return updated;
     });
   };
@@ -273,6 +280,8 @@ export default function App() {
     setSpeInventory(prev => {
       const updated = typeof updater === 'function' ? updater(prev) : updater;
       syncSpeInventory(updated);
+      setLastUpdatedAt(new Date());
+      setAuditTrail(entries => appendAuditEntry(entries, 'SPE_UPDATE', { source: isCloudSynced ? 'cloud' : 'simulation' }));
       return updated;
     });
   };
@@ -280,7 +289,14 @@ export default function App() {
   const handleUpdateShipments = (updater) => {
     setShipments(prev => {
       const updated = typeof updater === 'function' ? updater(prev) : updater;
+      const validation = validateShipments(updated);
+      if (!validation.valid) {
+        window.alert(`운송 데이터 검증 실패:\n${validation.errors.slice(0, 5).join('\n')}`);
+        return prev;
+      }
       syncShipments(updated);
+      setLastUpdatedAt(new Date());
+      setAuditTrail(entries => appendAuditEntry(entries, 'SHIPMENT_UPDATE', { count: updated.length, source: isCloudSynced ? 'cloud' : 'simulation' }));
       return updated;
     });
   };
@@ -481,6 +497,13 @@ export default function App() {
         setSelectedProduct={handleSelectProduct}
         themeMode={themeMode}
       />
+      <div className={`px-3 py-1.5 text-[11px] font-bold border-b flex flex-wrap items-center gap-3 ${isCloudSynced ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200' : 'bg-amber-950/80 border-amber-700 text-amber-200'}`} role="status">
+        <span>v1.4.0 · 2026-09-04</span>
+        <span>{isCloudSynced ? '● 실데이터 연결' : '● 시뮬레이션 데이터'}</span>
+        <span>기준시각 {lastUpdatedAt.toLocaleString('ko-KR')}</span>
+        <span>수량 단위 EA · 운송 중 재고 별도 표시</span>
+        <span>변경 기록 {auditTrail.length}건</span>
+      </div>
 
       {/* Main Tactical Map Viewport */}
       <main className="flex-1 relative flex flex-col">
